@@ -50,12 +50,45 @@
 ·模式(mode)：production、development。默认production，代码被压缩
 
 *loader：
-·webpack默认只能打包js文件  
-·file-loader：
-  -- 文件打包
-  -- 作用：将文件移动到dist文件夹下 → 将文件随机命名或自定义 → 将文件名作为返回值返回
-
-
+·webpack默认只能打包js文件
+·文件(图片)打包：  
+  -- file-loader：
+     -- 文件打包
+     -- 作用：将文件移动到dist文件夹下 → 将文件随机命名或自定义 → 将文件名作为返回值返回
+  -- url-loader：
+     -- 与file-loader相似
+     -- 可以将文件打包为base64
+     -- limit: 满足限制文件大小才进行打包，以免js过大，影响加载
+        {
+            loader: 'url-loader',
+            options: {
+                name: '[name]_[hash].[ext]',
+                outputPath: 'images/',
+               limit: 10240
+            }
+		    }
+·样式打包：
+  -- postcss-loader：自动添加css的浏览器厂商前缀，如-webkit-、-ms-等
+  -- sass-loader：将sass文件翻译为css文件
+  -- css-loader：分析出css文件之间的import引用关系，并将他们打包成一个css文件
+  -- style-loader：将css-loader打包出的文件内容挂在到html下的head中
+  -- 配置：
+     {
+         test: /\.scss$/,
+         use: [
+             'style-loader', 
+             {
+               loader:'css-loader', 
+               options:{
+                 importLoaders:2,  //当引入的css文件存在@import其他css文件,该配置能使引入的其他css文件也进行postcss-loade和sass-loader这2个loader打包
+                 modules:true,  //开启css模块化打包，防止全局引入的css影响其他模块的css,注意代码也要调整，参考《5、loader--css-modules》
+               }
+             },
+             'sass-loader',
+             'postcss-loader'
+         ]
+     }
+  -- loader的执行顺序：从下至上、从右至左
 
 
 

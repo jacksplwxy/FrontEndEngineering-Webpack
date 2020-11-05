@@ -1,3 +1,4 @@
 node_modules
 info
 dist
+.DS_Store
