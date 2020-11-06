@@ -44,7 +44,7 @@
   -- chunk names：打包入口的文件名
 
 
-*webpack.config.js：
+*配置文件webpack.config.js：
 ·webpack.config.js是webpack的配置文件
 ·修改默认配置文件为webpackconf.js：npx webpack --config webpackconf.js
 ·模式(mode)：production、development。默认production，代码被压缩
@@ -173,9 +173,6 @@
           '/api':'http://localhost:3000'  //当访问url中包含api，则跳转指定代理url
         }
 	  }
-
-
-*webpack核心功能：
 ·Three Shaking：
   -- 一个文件中，只打包用到了的模块，未使用的部分shaking掉
   -- 只支持ES Module的引入
@@ -184,9 +181,17 @@
         1、在webpack.config.js下：plugins.optimization.usedExports:true
         2、可选项：package.json下：sideEffects:["@babel/polly-fill","*.css"] //忽略@babel/polly-fill、任何css模块
      -- production模式下：只需要在package.json下配置sideEffects，默认开启Three Shaking功能
-
-
-
+·development模式和produciton模式：
+  -- development模式较produciton模式区别：
+     -- 启动了一个服务器
+     -- 重新打包
+     -- 热更新
+     -- sourceMap级别不同
+     -- 代码未做压缩
+  -- 实际开发中，可以将生产环境配置和开发环境配置分成两个文件，并且将公共配置单独提出来，生成：webpack.common.js、webpack.dev.js、webpack.prod.js
+  -- npm命令行改为：
+     -- "dev": "webpack-dev-server --config ./build/webpack.dev.js",
+     -- "build": "webpack --config ./build/webpack.prod.js"
 
 
 
