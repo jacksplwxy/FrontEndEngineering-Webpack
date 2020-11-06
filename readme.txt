@@ -98,10 +98,49 @@
 ·clean-webpack-plugin：
   -- 重新打包前，删除原来的打包文件夹
   -- 可以配置需要删除的文件夹
+·HotModuleReplacementPlugin：
+  -- webpack自带插件
+  -- 它允许在运行时更新各种模块，而无需进行完全刷新。即页面不刷新的情况下，更新代码并生效。
+  -- 在webpack.config.js中配置：
+     -- plugins: [new webpack.HotModuleReplacementPlugin()]
+     -- devServer: {hot: true,hotOnly: true}
+  -- 在js中使用：vue-loader实现了以下代码，所以看上去vue自带热更新效果
+     import number from './number'
+     number()
+     if(module.hot){
+       module.hot.accept('./number',()=>{
+         documnet.body.removeChild(document.getElementById('number'))
+         number()
+       })
+     }
 
-
-
-
+*webpack核心配置：
+·entry：
+  -- 打包入口，支持多页面的多个入口
+  -- 文档：https://www.webpackjs.com/configuration/entry-context/#entry
+·output：
+  -- publicPath：path是webpack所有文件的输出的路径，必须是绝对路径；publicPath 并不会对生成文件的路径造成影响，主要是对你的页面里面引入的资源的路径做对应的补全，常见的就是css文件里面引入的图片
+  -- 文档：https://www.webpackjs.com/configuration/output/
+·devtool:
+  -- source-map：开启sourceMap,调试时可以从打包后的文件对应到源码位置
+  -- cheap-module-eval-source-map：开发环境中推荐的模式，提示比较全，且打包速度快。
+     -- 其中cheap：表示只映射到源码的多少行，不映射到多少列（因为多少列通常意义不太大），这样可以很大提升打包速度
+     -- 其中module：可以映射到第三方模块源码中
+     -- 其中eval：eval方式生成sourceMap，速度快
+  -- cheap-module-source-map：线上生产环境调试时推荐的模式，提示效果比cheap-module-eval-source-map更好
+  -- 文档：https://www.webpackjs.com/configuration/devtool/
+·devServer：
+  -- 基本功能：启动一个本地服务器，监听文件变化自动打包，并且自动刷新浏览器。而webpack --watch只会监听变化自动打包这一个功能。
+  -- 配置：
+  	devServer: {	//启动devServer服务器
+		    contentBase: './dist',	//指定服务器根路径
+		    open: true,	//自动打开浏览器，自动访问服务器地址
+		    port: 8080,	//指定服务端口
+        proxy:{ //启动代理
+          '/api':'http://localhost:3000'  //当访问url中包含api，则跳转指定代理url
+        }
+	  }
+·
 
 
 
