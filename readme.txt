@@ -90,8 +90,14 @@
      }
   -- loader的执行顺序：从下至上、从右至左
 
-
-
+*plugins：
+·plugins可以在webpack运行到某个时刻的时候帮你做一些事情
+·html-webpack-plugin：
+  -- 在打包结束后自动生成一个html文件，并把打包生成的js自动引入进来
+  -- 可以配置指定模板来生成html文件
+·clean-webpack-plugin：
+  -- 重新打包前，删除原来的打包文件夹
+  -- 可以配置需要删除的文件夹
 
 
 
