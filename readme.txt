@@ -192,12 +192,34 @@
   -- npm命令行改为：
      -- "dev": "webpack-dev-server --config ./build/webpack.dev.js",
      -- "build": "webpack --config ./build/webpack.prod.js"
-
-
-
-
-
-
+·Code Splitting：
+  -- Code Splitting：代码分割
+  -- 背景：
+     -- 当打包体积很大的第三方库时，打包生成的文件也会很大，导致js加载过慢，页面渲染不及时问题
+     -- 当我们修改一部分业务代码重新打包时，浏览器又得重新加载打包后的整个文件
+  -- webpack实现代码分割的3种方式：
+     -- webpack的手动代码分割解决方案：
+        -- 手动将第三方库也作为一个打包入口，html多个js引入
+        -- 分析：该方案需手动配置，麻烦且易出错
+     -- webpack的自动分割方案——Code Splitting：
+        -- 配置:在webpack.config.js下：plugins.optimization.splitChunks.chunks:'all'
+        -- 分析:该方案可以允许我们编写同步代码，webpack自动切割第三方库，html同步引入多个js
+     -- 配置babel方案：
+        -- 配置:
+           1、安装babel-plugin-dynamic-import-webpack
+           2、在.babelrc下引入：plugins: ["@babel/plugin-syntax-dynamic-import"]
+           3、编写代码：
+              function getComponent(){
+                return import('lodash').then({default:_})=>{
+                 var element =document.createElement('div')
+                 element.innerHTML=_.join(['jack','ya'],'**')
+                 return element
+                }
+              }
+              getComponent().then(ele=>{
+                document.body.appendChild(ele)
+              })
+        -- 分析:该方案为异步加载方案，使用时才加载，webpack无需任何配置，会自动对异步加载的文件进行切割
 
 
 
