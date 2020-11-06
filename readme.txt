@@ -89,6 +89,39 @@
          ]
      }
   -- loader的执行顺序：从下至上、从右至左
+·babel：
+  -- 高版本js代码打包
+  -- 配置前需安装@babel/core、babel-loader、@babel/preset-env、@babel/polyfill
+     -- babel-loader：babel在webpack中的加载器
+     -- @babel/core：babel核心库，帮助babel识别es代码内容，并将es代码翻译为AST,再根据语法转换规则将AST转换为低版本es代码
+     -- @babel/preset-env：es6转化为es5的翻译规则
+     -- @babel/polyfill：
+        -- @babel/preset-env只是提供了语法转换的规则，但是它并不能弥补浏览器缺失的一些新的功能，如一些内置的方法和对象，如Promise,Array.from等，此时就需要polyfill来做js得垫片，弥补低版本浏览器缺失的这些新功能
+        -- 在全局位置单独引入：import "@babel/polyfill"，如果配置了useBuiltIns: 'usage' ，可以不用单独引入
+        -- polyfill是全局配置，会污染其他包。对于不想污染其他包的时候可以用@babel/plugin-transform-runtime。故开发类库，第三方模块或者组件库时使用transform-runtime，平常的项目使用babel-polyfill即可
+  -- 使用babel-loader加载js文件
+      { 
+          test: /\.js$/,  //只对js文件打包
+          exclude: /node_modules/,  //排除node_modules文件夹下的文件打包
+          loader: 'babel-loader', //使用babel-loader进行js文件加载
+      }
+  -- babel配置：
+     	presets: [
+        [
+          "@babel/preset-env",  //将es6转es5的核心包
+          {
+            targets: {
+              chrome: ">67",  //对于chrome浏览器大于67版本就支持的功能不进行es版本的转换
+            },
+            useBuiltIns: 'usage'  //只对业务代码中用到的特性进行打包，未用到的部分不打包，以减小打包体积。该配置会按需自动引入@babel/polyfill。
+          }
+        ],
+        "@babel/preset-react" //支持打包react代码
+	    ]
+  -- 文档：
+      -- 《babel官网——在webpack中的配置》：https://www.babeljs.cn/setup#installation
+      -- 《了解babel：polyfill、loader、 preset-env及 core之间的关系》：https://zhuanlan.zhihu.com/p/138108118
+
 
 *plugins：
 ·plugins可以在webpack运行到某个时刻的时候帮你做一些事情
@@ -140,13 +173,17 @@
           '/api':'http://localhost:3000'  //当访问url中包含api，则跳转指定代理url
         }
 	  }
-·
 
 
-
-
-
-
+*webpack核心功能：
+·Three Shaking：
+  -- 一个文件中，只打包用到了的模块，未使用的部分shaking掉
+  -- 只支持ES Module的引入
+  -- 如何配置：
+     -- development模式下：
+        1、在webpack.config.js下：plugins.optimization.usedExports:true
+        2、可选项：package.json下：sideEffects:["@babel/polly-fill","*.css"] //忽略@babel/polly-fill、任何css模块
+     -- production模式下：只需要在package.json下配置sideEffects，默认开启Three Shaking功能
 
 
 
