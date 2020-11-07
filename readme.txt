@@ -181,7 +181,7 @@
   -- 文档：
      -- 《webapck4抽取公共模块“SplitChunksPlugin”》：https://www.cnblogs.com/xieqian/p/10973039.html
 
-*webpack核心配置：
+*webpack核心概念和配置：
 ·entry：
   -- 打包入口，支持多页面的多个入口
   -- 文档：https://www.webpackjs.com/configuration/entry-context/#entry
@@ -268,12 +268,59 @@
            2、由于babel-plugin-dynamic-import-webpack不支持/* webpackChunkName:"lodash" */这种语法，可以用@babel/plugin-syntax-dynamic-import替换掉该插件,此时打包将生成一个名vendors-lodash.js
            3、将vendors-lodashs.js改为lodash.js：
               利用插件SplitChunksPlugin：在webpack.config.js下，optimization.splitChunks.cacheGroups:{vendors:false,default:false}
-
-
-
-
-
-
+  -- chunk：代码块。代码被分割后，每一个代码块就可以称为一个chunk
+  -- 打包分析：https://www.webpackjs.com/guides/code-splitting/#bundle-%E5%88%86%E6%9E%90-bundle-analysis-
+·懒加载：
+  -- 懒加载：用到的时候才进行资源加载
+  -- 实现懒加载的方案有3种：
+     -- 通过ES6的import实现懒加载
+        function getComponent(){
+          return import(/* webpackChunkName:"lodash" */ 'lodash')=>{
+            var element =document.createElement('div')
+            element.innerHTML=_.join(['jack','ya'],'**')
+            return element
+          }
+        }
+     -- 通过ES7的async实现懒加载
+        async function getComponent(){
+          const {default:_}=await import(/* webpackChunkName:"lodash" */ 'lodash')
+          var element =document.createElement('div')
+          element.innerHTML=_.join(['jack','ya'],'**')
+          return element
+        }
+     -- 通过webpack的require.ensure实现懒加载（弃用了）
+        require.ensure(['lodash'], function() {
+            var _ = require('lodash')
+            var element =document.createElement('div')
+            element.innerHTML=_.join(['jack','ya'],'**')
+            return element
+        }, 'lodash')
+        -- require.ensure实现懒加载原理：require.ensure把一些js模块给独立出一个个js文件，然后需要用到的时候，在创建一个script对象，加入到document.head对象中即可，浏览器会去请求这个js文件
+·页面代码使用率：
+  -- 查看使用率：打开一个网站 → F12 → ctr+shift+p → 输入coverage → Show Coverage → 刷新即可 
+  -- 提升使用率的方式：只加载核心展示代码，异步加载未使用的代码（即懒加载）
+        document.addEventListenter('click',()=>{
+          import('./click.js').then(({default:func})=>{
+            func()
+          })
+        }) 
+  -- prefetch和preload：
+     -- 异步加载导致加载速度变慢，体验差。可以通过preload/prefetch解决
+     -- preload：
+        -- preload加载的资源是在浏览器渲染机制之前进行处理的，并且不会阻塞onload事件；
+        -- preload可以支持加载多种类型的资源，并且可以加载跨域资源；
+        -- preload加载的js脚本其加载和执行的过程是分离的。即preload会预加载相应的脚本代码，待到需要时自行调用
+     -- prefetch：
+        -- prefetch加载的资源可以获取当前或非当前页面所需要的资源
+        -- 能将其放入缓存至少5分钟（无论资源是否可以缓存）
+        -- 当页面跳转时，未完成的prefetch请求不会被中断
+     -- prefetch和preload区别：preload主要用于预加载当前页面需要的资源；而prefetch主要用于加载将来页面可能需要的资源
+     -- prefetch使用实例：
+            document.addEventListenter('click',()=>{
+              import(/* webpackPrefetch:true */ './click.js').then(({default:func})=>{
+                func()
+              })
+            }
 
 
 
