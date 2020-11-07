@@ -180,13 +180,20 @@
         在分组中可以人为地规定打包后文件的名字，在 vendor 分组中添加 filename = "vendor.js" 之后，在 vendor 分组中打包后文件的名字都是 vendor.js 
   -- 文档：
      -- 《webapck4抽取公共模块“SplitChunksPlugin”》：https://www.cnblogs.com/xieqian/p/10973039.html
+·mini-css-extract-plugin：
+  -- css单独打包插件
+  -- 该插件不支持热更新，所以不在开发环境中使用，影响开发效率，只在生产环境中使用
+  -- 配置时，注意Three Shaking配置影响打包，因为它开启了optimization.usedExports:true。只需在package.json下的sideEffects需配置*.css
+  -- 配合插件optimize-css-assets-webpack-plugin，可以实现css的压缩
 
 *webpack核心概念和配置：
 ·entry：
   -- 打包入口，支持多页面的多个入口
   -- 文档：https://www.webpackjs.com/configuration/entry-context/#entry
 ·output：
-  -- publicPath：path是webpack所有文件的输出的路径，必须是绝对路径；publicPath 并不会对生成文件的路径造成影响，主要是对你的页面里面引入的资源的路径做对应的补全，常见的就是css文件里面引入的图片
+  -- filename:此选项决定了每个输出bundle的名称。这些bundle将写入到output.path选项指定的目录下。
+  -- publicPath：path是webpack所有文件的输出的路径，必须是绝对路径；publicPath并不会对生成文件的路径造成影响，主要是对你的页面里面引入的资源的路径做对应的补全，常见的就是css文件里面引入的图片
+  -- chunkFilename:异步引入的代码的打包文件名
   -- 文档：https://www.webpackjs.com/configuration/output/
 ·devtool:
   -- source-map：开启sourceMap,调试时可以从打包后的文件对应到源码位置
@@ -321,8 +328,10 @@
                 func()
               })
             }
-
-
+·css单独打包：
+  -- webpack默认会将css打包进入js文件中
+  -- css文件单独打包出来需使用插件：mini-css-extract-plugin
+  
 
 
 
