@@ -329,7 +329,7 @@
               })
             }
 ·cacheing：
-  -- 浏览器会缓存静态资源，只要资源文件名不变，浏览器就会直接从缓存中读取资源。这样会导致项目上线后，用户浏览器缓存了文件，但是我们更新了代码，用户并不能请求到最新的文件。解决这个问题的办法是资源名后跟一个hash值，例如main.dfsjkdfjk23j2k3j23.js
+  -- 背景：浏览器会缓存静态资源，只要资源文件名不变，浏览器就会直接从缓存中读取资源。这样会导致项目上线后，用户浏览器缓存了文件，但是我们更新了代码，用户并不能请求到最新的文件。解决这个问题的办法是资源名后跟一个hash值，例如main.dfsjkdfjk23j2k3j23.js
   -- webpack配置实现在资源名上加hash，只要我们更新代码，就会生成一个新的hash文件，并且webpack会自动更新新文件的引用：
      output:[
        filename:'[name].[contenthash].js'
@@ -344,7 +344,31 @@
 ·css单独打包：
   -- webpack默认会将css打包进入js文件中
   -- css文件单独打包出来需使用插件：mini-css-extract-plugin
-  
+·shimming：
+  -- 背景：假如一个第三方库的运行需要依赖jquery，但是它的package.json并未配置jquery依赖。这时我们需要全局引入jquery，实现类似@babel/polly-fill
+  -- webpack全局引入第三方库的配置：
+     1、引入webpack：
+        const webpack = require('webpack')
+     2、配置webpack自带插件：ProvidePlugin
+        plugins: [
+          new webpack.ProvidePlugin({
+            $: 'jquery',
+            _join: ['lodash', 'join']
+          })
+        ]
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
