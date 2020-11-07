@@ -132,7 +132,7 @@
   -- 重新打包前，删除原来的打包文件夹
   -- 可以配置需要删除的文件夹
 ·HotModuleReplacementPlugin：
-  -- webpack自带插件
+  -- webpack开箱即用插件
   -- 它允许在运行时更新各种模块，而无需进行完全刷新。即页面不刷新的情况下，更新代码并生效。
   -- 在webpack.config.js中配置：
      -- plugins: [new webpack.HotModuleReplacementPlugin()]
@@ -146,6 +146,40 @@
          number()
        })
      }
+·SplitChunksPlugin：
+  -- wenpack开箱即用插件
+  -- 背景：在多入口文件打包的时候，出现了重复引入第三方库的问题。在webpack4之前，都是利用 CommonsChunkPlugin 插件来进行公共模块抽取。到了webpack4之后，利用了SplitChunksPlugin插件来进行公共模块抽取
+  -- 该组件是Code Splitting的基础组件
+  -- 默认配置说明：
+      module.exports = {
+        optimization: {
+          splitChunks: {
+            chunks: 'async',     // 代码分割时对异步代码生效，all：所有代码有效，inital：同步代码有效
+            minSize: 30000,      // 代码分割最小的模块大小，引入的模块大于30000B也就是30kb 才做代码分割
+            maxSize: 0,      // 代码分割最大的模块大小，大于这个值要进行代码分割，一般使用默认值
+            minChunks: 1,      // 引入的次数大于等于1时才进行代码分割
+            maxAsyncRequests: 6,      // 最大的异步请求数量,也就是同时加载的模块最大模块数量
+            maxInitialRequests: 4,      // 入口文件做代码分割最多分成4个js文件
+            automaticNameDelimiter: '~',      // 文件生成时的连接符
+            automaticNameMaxLength: 30,      // 自动生成的文件名的最大长度
+            cacheGroups: {  //缓存组，默认分为vendors和default两个组。webpack会先缓存代码，待分析完所有代码再决定根据代码是否满足组条件决定打包到哪个组中
+              vendors: {  // vendors缓存组
+                test: /[\\/]node_modules[\\/]/,      // 位于node_modules中的模块做代码分割
+                priority: -10      // 根据优先级决定打包到哪个组里，例如一个node_modules中的模块进行代码分割，既满足vendors，又满足default，那么根据优先级会打包到vendors组中。
+              }, 
+              default: {      // default缓存组。没有test表明所有的模块都能进入 default 组，但是注意它的优先级较低。
+                priority: -20,      //  根据优先级决定打包到哪个组里,打包到优先级高的组里。
+                reuseExistingChunk: true      // 如果一个模块已经被打包过了,那么再打包时就忽略这个上模块
+              }
+            }
+          }
+        }
+      } 
+  -- 其他配置：
+     -- optimization.splitChunks.cacheGroups.vendors.filename:"vendor.js"
+        在分组中可以人为地规定打包后文件的名字，在 vendor 分组中添加 filename = "vendor.js" 之后，在 vendor 分组中打包后文件的名字都是 vendor.js 
+  -- 文档：
+     -- 《webapck4抽取公共模块“SplitChunksPlugin”》：https://www.cnblogs.com/xieqian/p/10973039.html
 
 *webpack核心配置：
 ·entry：
@@ -178,7 +212,7 @@
   -- 只支持ES Module的引入
   -- 如何配置：
      -- development模式下：
-        1、在webpack.config.js下：plugins.optimization.usedExports:true
+        1、在webpack.config.js下：optimization.usedExports:true
         2、可选项：package.json下：sideEffects:["@babel/polly-fill","*.css"] //忽略@babel/polly-fill、任何css模块
      -- production模式下：只需要在package.json下配置sideEffects，默认开启Three Shaking功能
 ·development模式和produciton模式：
@@ -197,14 +231,19 @@
   -- 背景：
      -- 当打包体积很大的第三方库时，打包生成的文件也会很大，导致js加载过慢，页面渲染不及时问题
      -- 当我们修改一部分业务代码重新打包时，浏览器又得重新加载打包后的整个文件
+     -- 多入口打包文件时，公共库被重复打包
   -- webpack实现代码分割的3种方式：
      -- webpack的手动代码分割解决方案：
         -- 手动将第三方库也作为一个打包入口，html多个js引入
         -- 分析：该方案需手动配置，麻烦且易出错
-     -- webpack的自动分割方案——Code Splitting：
-        -- 配置:在webpack.config.js下：plugins.optimization.splitChunks.chunks:'all'
-        -- 分析:该方案可以允许我们编写同步代码，webpack自动切割第三方库，html同步引入多个js
-     -- 配置babel方案：
+     -- webpack的自动分割方案：
+        -- 配置:
+           1、在webpack.config.js下：optimization.splitChunks.chunks:'all'
+           2、在webpack.config.js下，optimization.splitChunks.cacheGroups:{vendors:false,default:false}
+        -- 分析:
+           -- 该方案可以允许我们编写同步代码，webpack自动切割第三方库，html同步引入多个js
+           -- 该代码分割能力来自插件：SplitChunksPlugin
+     -- webpack + babel方案：
         -- 配置:
            1、安装babel-plugin-dynamic-import-webpack
            2、在.babelrc下引入：plugins: ["@babel/plugin-syntax-dynamic-import"]
@@ -219,9 +258,16 @@
               getComponent().then(ele=>{
                 document.body.appendChild(ele)
               })
-        -- 分析:该方案为异步加载方案，使用时才加载，webpack无需任何配置，会自动对异步加载的文件进行切割
-
-
+        -- 分析:
+           -- 该方案为异步加载方案，使用时才加载，webpack无需任何配置，会自动对异步加载的文件进行切割
+           -- 异步加载能力来自babel插件babel-plugin-dynamic-import-webpack
+           -- 代码分割能力来自webpack插件SplitChunksPlugin
+        -- 异步打包模块命名：
+           1、代码第二行：return import('lodash').then({default:_})=>{
+              变为：return import(/* webpackChunkName:"lodash" */ 'lodash').then({default:_})=>{
+           2、由于babel-plugin-dynamic-import-webpack不支持/* webpackChunkName:"lodash" */这种语法，可以用@babel/plugin-syntax-dynamic-import替换掉该插件,此时打包将生成一个名vendors-lodash.js
+           3、将vendors-lodashs.js改为lodash.js：
+              利用插件SplitChunksPlugin：在webpack.config.js下，optimization.splitChunks.cacheGroups:{vendors:false,default:false}
 
 
 
