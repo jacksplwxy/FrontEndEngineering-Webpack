@@ -345,6 +345,7 @@
   -- webpack默认会将css打包进入js文件中
   -- css文件单独打包出来需使用插件：mini-css-extract-plugin
 ·shimming：
+  -- shimming：垫片，补充原来全局环境功能不足的情况
   -- 背景：假如一个第三方库的运行需要依赖jquery，但是它的package.json并未配置jquery依赖。这时我们需要全局引入jquery，实现类似@babel/polly-fill
   -- webpack全局引入第三方库的配置：
      1、引入webpack：
