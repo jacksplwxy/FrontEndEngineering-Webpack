@@ -212,7 +212,8 @@
 		    port: 8080,	//指定服务端口
         proxy:{ //启动代理
           '/api':'http://localhost:3000'  //当访问url中包含api，则跳转指定代理url
-        }
+        },
+        historyApiFallback:true //自动将404响应跳转到首页入口文件 index.html,常用于单页应用路由跳转配置
 	  }
 ·Three Shaking：
   -- 一个文件中，只打包用到了的模块，未使用的部分shaking掉
@@ -357,20 +358,94 @@
             _join: ['lodash', 'join']
           })
         ]
+·env：
+  -- env：环境全局对象
+  -- 使用实例：
+      module.exports = (env) => {
+        if(env && env.production) {
+          return merge(commonConfig, prodConfig);
+        }else {
+          return merge(commonConfig, devConfig);
+        }
+      }
+      "scripts": {
+          "dev": "webpack-dev-server --config ./build/webpack.common.js",
+          "build": "webpack --env.production --config ./build/webpack.common.js"
+      }
+·resolve：
 
+*各类场景配置的最佳实践：
+·库的配置：
+  -- 库的打包通常需要满足其他用户多种引入方式，例如import、require、<script>等
+  -- 配置：
+      {
+          externals: 'lodash',//忽略lodash的打包
+          output: {
+              path: path.resolve(__dirname, 'dist'),
+              filename: 'library.js',
+              library: 'library',  //标签<script src='./library'></script>引入方式 
+              libraryTarget: 'umd'  //通用模块引入方式
+          }
+      }
+·pwa的配置
+·TypeScript的配置：
+·Eslint的配置：
+·多页面打包配置：
+  -- 多页面，即多个html页面
 
+*提升webpack打包速度：
+·跟上技术的迭代：Node、Npm、Yarn：
+  -- node运行速度提升，依赖node的webpack速度自然提升
+  -- 新版本的包管理工具能够更快分析包的依赖和引入
+·在尽可能少的模块上应用Loader：
+  -- 例如增加exclude配置，可以免去加载node_modules中的js文件
+      rules: [{ 
+        test: /\.js$/, 
+        exclude: /node_modules/, 
+        loader: 'babel-loader',
+      }]
+·plugin尽可能精简，并确保可靠：
+  -- 例如开发环境下，无需对代码进行压缩，所以无需配置压缩插件
+  -- 选择性能比较好的插件
+·resolve参数合理配置：
+  -- 不要配置过多查找，影响性能
+·使用DllPligin插件提升打包速度：
+  -- 第三方模块只打包一次
+     -- 使用add-asset-html-webpack-plugin插件将第三方模块打包到一个统一文件中，并暴露到全局变量中
+     -- 使用DllReferencePlugin插件实现第三方模块引入是从打包的统一文件中进行，而不是node_modules中
+·控制包文件大小：
+  -- 配置Three Shaking
+  -- 配置SplitChunksPlugin
+·thread-loader,parallel-webpack,happypack多进程打包
+·合理使用sourceMap
+·结合stats分析打包结果
+·开发环境内存编译
+·开发环境无用插件剔除
 
+*webpack的原理：
+·如何编写一个loader
+  -- 编写一个简单的loader--replaceLoader.js：
+      module.exports = function(source) { //注意此处不能写成箭头函数
+        return source.replace('jacksplwxy', 'xiaoya');
+      }
+  -- 使用该loader:
+     webpack.conf.js下
+      module: {
+        rules: [{
+          test: /\.js/,
+          use: [path.resolve(__dirname,'./loaders/replaceLoader.js')]
+        }]
+      }
+  -- 文档：
+     -- 《loader API》：https://www.webpackjs.com/api/loaders/
+·如何编写一个plugin：
+·如何编写一个简易webpack：
 
+  
 
-
-
-
-
-
-
-
-
-
+*Q&A:
+·如何实现模块之间依赖关系分析：
+·发现第三方库有问题时，如何优雅修改node_modules中的库
 
 
 
