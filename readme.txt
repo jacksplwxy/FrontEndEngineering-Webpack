@@ -392,7 +392,10 @@
 ·Eslint的配置：
 ·多页面打包配置：
   -- 多页面，即多个html页面
-
+·Vue Cli3的配置：
+  -- 通过创建vue.config.js文件进行配置
+  -- cli3的配置是在webpack基础上进行了一层封装，简化了webpack打包配置，具体配置参考：https://cli.vuejs.org/zh/config/#%E5%85%A8%E5%B1%80-cli-%E9%85%8D%E7%BD%AE
+  -- cli3同样可以进行webpack的原生配置，就是通过configureWebpack这个配置项进行，文档：https://cli.vuejs.org/zh/config/#configurewebpack
 *提升webpack打包速度：
 ·跟上技术的迭代：Node、Npm、Yarn：
   -- node运行速度提升，依赖node的webpack速度自然提升
@@ -439,7 +442,47 @@
   -- 文档：
      -- 《loader API》：https://www.webpackjs.com/api/loaders/
 ·如何编写一个plugin：
+  -- 原理：在Webpack运行的生命周期中会广播出许多事件，Plugin可以监听这些事件，在合适的时机通过Webpack提供的API改变输出结果。
+  -- 一个最基础的Plugin的代码是这样的：
+      class BasicPlugin{
+        // 在构造函数中获取用户给该插件传入的配置
+        constructor(options){
+        }
+        // Webpack 会调用BasicPlugin实例的apply方法给插件实例传入compiler对象
+        apply(compiler){
+          compiler.plugin('compilation',function(compilation) {
+          })
+        }
+      }
+      // 导出 Plugin
+      module.exports = BasicPlugin;
+  -- 在使用上面的Plugin时，相关配置代码如下：
+      const BasicPlugin = require('./BasicPlugin.js');
+      module.export = {
+        plugins:[
+          new BasicPlugin(options),
+        ]
+      }
+  -- webpack运行plugin原理：
+     Webpack启动后，在读取配置的过程中会先执行new BasicPlugin(options)初始化一个BasicPlugin获得其实例。
+     在初始化compiler对象后，再调用basicPlugin.apply(compiler)给插件实例传入compiler对象。
+     插件实例在获取到compiler对象后，就可以通过compiler.plugin(事件名称, 回调函数) 监听到Webpack广播出来的事件。
+     并且可以通过compiler对象去操作Webpack。
+  -- Compiler和Compilation：
+     -- Compiler：包含了Webpack环境所有的的配置信息，包含options，loaders，plugins这些信息，这个对象在Webpack启动时候被实例化，它是全局唯一的，可以简单地把它理解为Webpack实例；
+     -- Compilation:包含了当前的模块资源、编译生成资源、变化的文件等。当Webpack以开发模式运行时，每当检测到一个文件变化，一次新的Compilation将被创建。Compilation对象也提供了很多事件回调供插件做扩展。通过Compilation也能读取到Compiler对象。
+     -- Compiler和Compilation的区别在于：Compiler代表了整个Webpack从启动到关闭的生命周期，而Compilation只是代表了一次新的编译。
+  -- 文档：
+     -- 《Webpack原理-编写Plugin》：https://segmentfault.com/a/1190000012840742
 ·如何编写一个简易webpack：
+  -- 本质上，webpack 是一个现代 JavaScript 应用程序的静态模块打包器(module bundler)。当 webpack 处理应用程序时，它会递归地构建一个依赖关系图(dependency graph)，其中包含应用程序需要的每个模块，然后将所有这些模块打包成一个或多个 bundle。
+  -- 打包流程：
+     -- 1、利用babel完成代码转换,并生成单个文件的依赖
+     -- 2、生成依赖图谱
+     -- 3、生成最后打包代码
+  -- 源码：《27、make-webpack》
+  -- 文档： 
+     -- 《实现一个简单的Webpack》：https://zhuanlan.zhihu.com/p/76969308
 
   
 
