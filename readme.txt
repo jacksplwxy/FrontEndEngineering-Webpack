@@ -4,9 +4,11 @@
 ·js文件之间的依赖关系复杂，依赖顺序容易出错
 ·文件未压缩导致加载过慢
 
+
 *关于模块：
 ·文档：https://www.webpackjs.com/concepts/modules/
 ·文档：https://www.webpackjs.com/api/module-methods/
+
 
 *环境：
 ·安装node环境
@@ -20,6 +22,7 @@
 ·使用：
   -- npx webpack index.js  //用webpack翻译index.js文件
   -- 代码参考：src/lesson1
+
 
 *webpack是什么？
 ·webpack是什么:webpack是一个模块打包工具
@@ -48,6 +51,7 @@
 ·webpack.config.js是webpack的配置文件
 ·修改默认配置文件为webpackconf.js：npx webpack --config webpackconf.js
 ·模式(mode)：production、development。默认production，代码被压缩
+
 
 *loader：
 ·webpack默认只能打包js文件
@@ -185,6 +189,7 @@
   -- 该插件不支持热更新，所以不在开发环境中使用，影响开发效率，只在生产环境中使用
   -- 配置时，注意Three Shaking配置影响打包，因为它开启了optimization.usedExports:true。只需在package.json下的sideEffects需配置*.css
   -- 配合插件optimize-css-assets-webpack-plugin，可以实现css的压缩
+
 
 *webpack核心概念和配置：
 ·entry：
@@ -374,6 +379,7 @@
       }
 ·resolve：
 
+
 *各类场景配置的最佳实践：
 ·库的配置：
   -- 库的打包通常需要满足其他用户多种引入方式，例如import、require、<script>等
@@ -396,6 +402,8 @@
   -- 通过创建vue.config.js文件进行配置
   -- cli3的配置是在webpack基础上进行了一层封装，简化了webpack打包配置，具体配置参考：https://cli.vuejs.org/zh/config/#%E5%85%A8%E5%B1%80-cli-%E9%85%8D%E7%BD%AE
   -- cli3同样可以进行webpack的原生配置，就是通过configureWebpack这个配置项进行，文档：https://cli.vuejs.org/zh/config/#configurewebpack
+
+
 *提升webpack打包速度：
 ·跟上技术的迭代：Node、Npm、Yarn：
   -- node运行速度提升，依赖node的webpack速度自然提升
@@ -424,6 +432,7 @@
 ·结合stats分析打包结果
 ·开发环境内存编译
 ·开发环境无用插件剔除
+
 
 *webpack的原理：
 ·如何编写一个loader
@@ -484,11 +493,19 @@
   -- 文档： 
      -- 《实现一个简单的Webpack》：https://zhuanlan.zhihu.com/p/76969308
 
-  
 
-*Q&A:
-·如何实现模块之间依赖关系分析：
-·发现第三方库有问题时，如何优雅修改node_modules中的库
+*许可协议：
+  本项目所有文档遵循CC-BY-SA 4.0协议（ https://creativecommons.org/licenses/by-sa/4.0/deed.zh ）。使用者可以对本创作进行转载、节选、混编、二次创作，可以将其运用于商业用途，唯须署名作者，并且采用本创作的内容必须同样采用本协议进行授权
+
+
+*更多前端工程化内容：
+·npm：https://github.com/jacksplwxy/npm
+·webpack：https://github.com/jacksplwxy/webpack
+·代码质量：https://github.com/jacksplwxy/Good-Code
+·前端自动化测试：https://github.com/jacksplwxy/AutoTest
+·前端性能优化：https://github.com/jacksplwxy/FrontEndPerformanceOptimization
+·web安全：https://github.com/jacksplwxy/security
+·持续集成/持续部署：https://github.com/jacksplwxy/CI-CD
 
 
 
