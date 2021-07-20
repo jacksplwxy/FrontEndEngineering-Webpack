@@ -46,7 +46,6 @@
   -- chunks：打包生成的文件的id值
   -- chunk names：打包入口的文件名
 
-
 *配置文件webpack.config.js：
 ·webpack 开箱即用，可以无需使用任何配置文件。然而，webpack 会假定项目的入口起点为 src/index，然后会在 dist/main.js 输出结果，并且在生产环境开启压缩和优化。
 ·webpack.config.js是webpack的配置文件
@@ -436,6 +435,14 @@
 
 
 *webpack的原理：
+·原理：
+  1、解析webpack配置参数，合并从shell传入和webpack.config.js文件里配置的参数，生产最后的配置结果。
+  2、注册所有配置的插件，好让插件监听webpack构建生命周期的事件节点，以做出对应的反应。
+  3、从配置的entry入口文件开始解析文件构建AST语法树，找出每个文件所依赖的文件，递归下去。
+  4、在解析文件递归的过程中根据文件类型和loader配置找出合适的loader用来对文件进行转换。
+  5、递归完后得到每个文件的最终结果，根据entry配置生成代码块chunk。
+  6、输出所有chunk到文件系统。
+  文档：https://blog.csdn.net/sinat_17775997/article/details/89413142
 ·如何编写一个loader
   -- 编写一个简单的loader--replaceLoader.js：
       module.exports = function(source) { //注意此处不能写成箭头函数
@@ -493,6 +500,10 @@
   -- 源码：《27、make-webpack》
   -- 文档： 
      -- 《实现一个简单的Webpack》：https://zhuanlan.zhihu.com/p/76969308
+
+
+
+*webpack的打包策略：
 
 
 *总结：
