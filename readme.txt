@@ -459,6 +459,7 @@
   -- 文档：
      -- 《loader API》：https://www.webpackjs.com/api/loaders/
 ·如何编写一个plugin：
+  -- 实例：一个可以在html文件中插入自定义代码的插件 https://github.com/jacksplwxy/inject-body-compaticity-webpack-plugin
   -- 原理：在Webpack运行的生命周期中会广播出许多事件，Plugin可以监听这些事件，在合适的时机通过Webpack提供的API改变输出结果。
   -- 一个最基础的Plugin的代码是这样的：
       class BasicPlugin{
