@@ -281,7 +281,8 @@
            2、由于babel-plugin-dynamic-import-webpack不支持/* webpackChunkName:"lodash" */这种语法，可以用@babel/plugin-syntax-dynamic-import替换掉该插件,此时打包将生成一个名vendors-lodash.js
            3、将vendors-lodashs.js改为lodash.js：
               利用插件SplitChunksPlugin：在webpack.config.js下，optimization.splitChunks.cacheGroups:{vendors:false,default:false}
-  -- chunk：代码块。代码被分割后，每一个代码块就可以称为一个chunk
+  -- chunk：代码块。代码被分割后，每一个代码块就可以称为一个chunk；chunk是webpack根据功能拆分出来的，chunk包含着module，可能是一对多也可能是一对一，chunk包含三种情况，就是Entry配置（通过配置多个entry文件来实现）、动态/按需加载（通过写代码时主动使用import()或者require.ensure来动态加载）、抽取公共代码（使用splitChunks配置来提取公共代码）三种实现代码拆分的情况。
+  -- bundle与chunk：bundle是webpack打包之后的各个文件，一般就是和chunk是一对一的关系，bundle就是对chunk进行编译压缩打包等处理之后的产出
   -- 打包分析：https://www.webpackjs.com/guides/code-splitting/#bundle-%E5%88%86%E6%9E%90-bundle-analysis-
 ·懒加载：
   -- 懒加载：用到的时候才进行资源加载
