@@ -1,0 +1,2854 @@
+* 执行命令：
+  · 开发环境: npx vue-cli-service inspect --mode development >> webpack.config.development.js
+  · 生产环境: npx vue-cli-service inspect --mode production >> webpack.config.production.js
+
+
+*开发环境
+    const TerserPlugin = require('terser-webpack-plugin');
+    const VueLoaderPlugin = require('vue-loader/lib/plugin');
+    const { DefinePlugin } = require('webpack');
+    const CaseSensitivePathsPlugin = require('case-sensitive-paths-webpack-plugin');
+    const FriendlyErrorsWebpackPlugin = require('friendly-errors-webpack-plugin');
+    const HtmlWebpackPlugin = require('html-webpack-plugin');
+    const PreloadPlugin = require('preload-webpack-plugin');
+    const CopyPlugin = require('copy-webpack-plugin');
+
+    module.exports = {
+        // 模式
+        mode: 'development',
+        // 执行上下文
+        context: 'E:\\workspace\\vue-webpack',
+        node: {
+            setImmediate: false,
+            process: 'mock',
+            dgram: 'empty',
+            fs: 'empty',
+            net: 'empty',
+            tls: 'empty',
+            child_process: 'empty'
+        },
+        // 输出目录的配置
+        output: {
+            path: 'E:\\workspace\\vue-webpack\\dist',
+            filename: 'js/[name].js',
+            publicPath: '/',
+            chunkFilename: 'js/[name].js'
+        },
+        resolve: {
+            // resolve.alias - 缩小路径
+            alias: {
+            '@': 'E:\\workspace\\vue-webpack\\src',
+            vue$: 'vue/dist/vue.runtime.esm.js'
+            },
+            // resolve.extensions - 可简写后缀
+            extensions: ['.tsx', '.ts', '.mjs', '.js', '.jsx', '.vue', '.json', '.wasm'],
+            // resolve.modules - 告诉webpack去哪儿找node_modeles
+            modules: [
+            'node_modules',
+            'E:\\workspace\\vue-webpack\\node_modules',
+            'E:\\workspace\\vue-webpack\\node_modules\\@vue\\cli-service\\node_modules'
+            ],
+            plugins: [
+            {}
+            ]
+        },
+        resolveLoader: {
+            modules: [
+            'E:\\workspace\\vue-webpack\\node_modules\\@vue\\cli-plugin-typescript\\node_modules',
+            'E:\\workspace\\vue-webpack\\node_modules\\@vue\\cli-plugin-babel\\node_modules',
+            'node_modules',
+            'E:\\workspace\\vue-webpack\\node_modules',
+            'E:\\workspace\\vue-webpack\\node_modules\\@vue\\cli-service\\node_modules'
+            ],
+            plugins: [
+            {}
+            ]
+        },
+        module: {
+            // noParse - 过滤不需要解析的文件，第3方包没有其他依赖
+            noParse: /^(vue|vue-router|vuex|vuex-router-sync)$/,
+            rules: [
+            /**
+            * 处理.vue的loader
+            * 1. vue-loader
+            * 2. cache-loader
+            */
+            {
+                test: /\.vue$/,
+                use: [
+                // 和vue-loader的cacheDirectory/cacheIdentifier搭配使用，开启基于文件系统的模板编译缓存
+                {
+                    loader: 'cache-loader',
+                    options: {
+                    cacheDirectory: 'E:\\workspace\\vue-webpack\\node_modules\\.cache\\vue-loader',
+                    cacheIdentifier: '66891b6e'
+                    }
+                },
+                {
+                    loader: 'vue-loader',
+                    options: {
+                    compilerOptions: {
+                        whitespace: 'condense' // 去掉空格
+                    },
+                    cacheDirectory: 'E:\\workspace\\vue-webpack\\node_modules\\.cache\\vue-loader',
+                    cacheIdentifier: '66891b6e'
+                    }
+                }
+                ]
+            },
+            /**
+            * 处理.png|.jpeg|.jpg|.gif|.webp的处理
+            * 小于4K用url-loader，超过则用file-loader
+            */
+            {
+                test: /\.(png|jpe?g|gif|webp)(\?.*)?$/,
+                use: [
+                {
+                    loader: 'url-loader',
+                    options: {
+                    limit: 4096,
+                    fallback: {
+                        loader: 'file-loader',
+                        options: {
+                        name: 'img/[name].[hash:8].[ext]'
+                        }
+                    }
+                    }
+                }
+                ]
+            },
+            /**
+            * 处理`.svg`或`.svg?`的
+            * 用file-loader
+            */
+            {
+                test: /\.(svg)(\?.*)?$/,
+                use: [
+                {
+                    loader: 'file-loader',
+                    options: {
+                    name: 'img/[name].[hash:8].[ext]'
+                    }
+                }
+                ]
+            },
+            /**
+            * 处理.mp4或.webm或.ogg或.mp3或.wav或.flac或.aac
+            * 小于4K的用url-loader 大于4K的用file-loader
+            */
+            {
+                test: /\.(mp4|webm|ogg|mp3|wav|flac|aac)(\?.*)?$/,
+                use: [
+                {
+                    loader: 'url-loader',
+                    options: {
+                    limit: 4096,
+                    fallback: {
+                        loader: 'file-loader',
+                        options: {
+                        name: 'media/[name].[hash:8].[ext]'
+                        }
+                    }
+                    }
+                }
+                ]
+            },
+            /**
+            * 处理.woff2 或 .eot 或 .ttf 或 .otf的
+            * 小于4K的用url-loader 大于4K的用file-loader
+            */
+            {
+                test: /\.(woff2?|eot|ttf|otf)(\?.*)?$/i,
+                use: [
+                {
+                    loader: 'url-loader',
+                    options: {
+                    limit: 4096,
+                    fallback: {
+                        loader: 'file-loader',
+                        options: {
+                        name: 'fonts/[name].[hash:8].[ext]'
+                        }
+                    }
+                    }
+                }
+                ]
+            },
+            /**
+            * 处理.pug的
+            * 1. `.pug?vue`的用pug-plain-loader，该loader能将pug转为html字符串
+            * 2. 其他的则用pug-plain-loader + raw-loader
+            */
+            {
+                test: /\.pug$/,
+                oneOf: [
+                {
+                    resourceQuery: /vue/,
+                    use: [
+                    { loader: 'pug-plain-loader' }
+                    ]
+                },
+                {
+                    use: [
+                    { loader: 'raw-loader' },
+                    { loader: 'pug-plain-loader' }
+                    ]
+                }
+                ]
+            },
+            /**
+            * 处理`.css`的文件
+            * 1. 处理`.css?module` 的用 postcss-loader css-loader vue-style-loader
+            * 2. 处理`.css??vue` 的用 postcss-loader css-loader vue-style-loader。比第1中的少了个localIdentName
+            * 3. 处理`.css?.module`的用 postcss-loader css-loader vue-style-loader
+            * 4. 其他的 postcss-loader css-loader vue-style-loader
+            */
+            {
+                test: /\.css$/,
+                oneOf: [
+                {
+                    resourceQuery: /module/,
+                    use: [
+                    {
+                        loader: 'vue-style-loader',
+                        options: {
+                        sourceMap: false,
+                        shadowMode: false
+                        }
+                    },
+                    {
+                        loader: 'css-loader',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2, // 处理css中有@import的情况
+                        modules: {
+                            localIdentName: '[name]_[local]_[hash:base64:5]' // 配置生成的标识符
+                        }
+                        }
+                    },
+                    {
+                        loader: 'postcss-loader',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    }
+                    ]
+                },
+                {
+                    resourceQuery: /\?vue/,
+                    use: [
+                    {
+                        loader: 'vue-style-loader',
+                        options: {
+                        sourceMap: false,
+                        shadowMode: false
+                        }
+                    },
+                    {
+                        loader: 'css-loader',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2
+                        }
+                    },
+                    {
+                        loader: 'postcss-loader',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    }
+                    ]
+                },
+                {
+                    test: /\.module\.\w+$/,
+                    use: [
+                    {
+                        loader: 'vue-style-loader',
+                        options: {
+                        sourceMap: false,
+                        shadowMode: false
+                        }
+                    },
+                    {
+                        loader: 'css-loader',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2,
+                        modules: {
+                            localIdentName: '[name]_[local]_[hash:base64:5]'
+                        }
+                        }
+                    },
+                    {
+                        loader: 'postcss-loader',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    }
+                    ]
+                },
+                {
+                    use: [
+                    {
+                        loader: 'vue-style-loader',
+                        options: {
+                        sourceMap: false,
+                        shadowMode: false
+                        }
+                    },
+                    {
+                        loader: 'css-loader',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2
+                        }
+                    },
+                    {
+                        loader: 'postcss-loader',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    }
+                    ]
+                }
+                ]
+            },
+            /**
+            * 处理.post 或 .pcss的使用
+            * 1. `.post?module`或`.post?module`的使用 postcss-loader css-loader vue-style-loader
+            * 2. `??vue`的用 postcss-loader css-loader vue-style-loader
+            * 3. `?.module`开头的 postcss-loader css-loader vue-style-loader
+            * 4. 其他的 postcss-loader css-loader vue-style-loader
+            */
+            {
+                test: /\.p(ost)?css$/,
+                oneOf: [
+                {
+                    resourceQuery: /module/,
+                    use: [
+                    {
+                        loader: 'vue-style-loader',
+                        options: {
+                        sourceMap: false,
+                        shadowMode: false
+                        }
+                    },
+                    {
+                        loader: 'css-loader',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2,
+                        modules: {
+                            localIdentName: '[name]_[local]_[hash:base64:5]'
+                        }
+                        }
+                    },
+                    {
+                        loader: 'postcss-loader',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    }
+                    ]
+                },
+                {
+                    resourceQuery: /\?vue/,
+                    use: [
+                    {
+                        loader: 'vue-style-loader',
+                        options: {
+                        sourceMap: false,
+                        shadowMode: false
+                        }
+                    },
+                    {
+                        loader: 'css-loader',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2
+                        }
+                    },
+                    {
+                        loader: 'postcss-loader',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    }
+                    ]
+                },
+                {
+                    test: /\.module\.\w+$/,
+                    use: [
+                    {
+                        loader: 'vue-style-loader',
+                        options: {
+                        sourceMap: false,
+                        shadowMode: false
+                        }
+                    },
+                    {
+                        loader: 'css-loader',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2,
+                        modules: {
+                            localIdentName: '[name]_[local]_[hash:base64:5]'
+                        }
+                        }
+                    },
+                    {
+                        loader: 'postcss-loader',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    }
+                    ]
+                },
+                {
+                    use: [
+                    {
+                        loader: 'vue-style-loader',
+                        options: {
+                        sourceMap: false,
+                        shadowMode: false
+                        }
+                    },
+                    {
+                        loader: 'css-loader',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2
+                        }
+                    },
+                    {
+                        loader: 'postcss-loader',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    }
+                    ]
+                }
+                ]
+            },
+            /**
+            * 处理.scss
+            * 1. `?module`的使用 sass-loader postcss-loader css-loader vue-style-loader
+            * 2. `??vue`的使用 sass-loader postcss-loader css-loader vue-style-loader
+            * 3. `?.module`开头的 sass-loader postcss-loader css-loader vue-style-loader
+            * 4. 其他 sass-loader postcss-loader css-loader vue-style-loader
+            */
+            {
+                test: /\.scss$/,
+                oneOf: [
+                {
+                    resourceQuery: /module/,
+                    use: [
+                    {
+                        loader: 'vue-style-loader',
+                        options: {
+                        sourceMap: false,
+                        shadowMode: false
+                        }
+                    },
+                    {
+                        loader: 'css-loader',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2,
+                        modules: {
+                            localIdentName: '[name]_[local]_[hash:base64:5]'
+                        }
+                        }
+                    },
+                    {
+                        loader: 'postcss-loader',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    },
+                    {
+                        loader: 'sass-loader',
+                        options: {
+                        sourceMap: false
+                        }
+                    }
+                    ]
+                },
+                {
+                    resourceQuery: /\?vue/,
+                    use: [
+                    {
+                        loader: 'vue-style-loader',
+                        options: {
+                        sourceMap: false,
+                        shadowMode: false
+                        }
+                    },
+                    {
+                        loader: 'css-loader',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2
+                        }
+                    },
+                    {
+                        loader: 'postcss-loader',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    },
+                    {
+                        loader: 'sass-loader',
+                        options: {
+                        sourceMap: false
+                        }
+                    }
+                    ]
+                },
+                {
+                    test: /\.module\.\w+$/,
+                    use: [
+                    {
+                        loader: 'vue-style-loader',
+                        options: {
+                        sourceMap: false,
+                        shadowMode: false
+                        }
+                    },
+                    {
+                        loader: 'css-loader',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2,
+                        modules: {
+                            localIdentName: '[name]_[local]_[hash:base64:5]'
+                        }
+                        }
+                    },
+                    {
+                        loader: 'postcss-loader',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    },
+                    /* config.module.rule('scss').oneOf('normal-modules').use('sass-loader') */
+                    {
+                        loader: 'sass-loader',
+                        options: {
+                        sourceMap: false
+                        }
+                    }
+                    ]
+                },
+                {
+                    use: [
+                    {
+                        loader: 'vue-style-loader',
+                        options: {
+                        sourceMap: false,
+                        shadowMode: false
+                        }
+                    },
+                    {
+                        loader: 'css-loader',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2
+                        }
+                    },
+                    {
+                        loader: 'postcss-loader',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    },
+                    {
+                        loader: 'sass-loader',
+                        options: {
+                        sourceMap: false
+                        }
+                    }
+                    ]
+                }
+                ]
+            },
+            /**
+            * 处理.sass
+            * 1. `?module`的使用 sass-loader postcss-loader css-loader vue-style-loader
+            * 2. `??vue`的使用 sass-loader postcss-loader css-loader vue-style-loader
+            * 3. `?.module`开头的 sass-loader postcss-loader css-loader vue-style-loader
+            * 4. 其他 sass-loader postcss-loader css-loader vue-style-loader
+            */
+            {
+                test: /\.sass$/,
+                oneOf: [
+                {
+                    resourceQuery: /module/,
+                    use: [
+                    {
+                        loader: 'vue-style-loader',
+                        options: {
+                        sourceMap: false,
+                        shadowMode: false
+                        }
+                    },
+                    {
+                        loader: 'css-loader',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2,
+                        modules: {
+                            localIdentName: '[name]_[local]_[hash:base64:5]'
+                        }
+                        }
+                    },
+                    {
+                        loader: 'postcss-loader',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    },
+                    {
+                        loader: 'sass-loader',
+                        options: {
+                        sourceMap: false,
+                        sassOptions: {
+                            indentedSyntax: true
+                        }
+                        }
+                    }
+                    ]
+                },
+                {
+                    resourceQuery: /\?vue/,
+                    use: [
+                    {
+                        loader: 'vue-style-loader',
+                        options: {
+                        sourceMap: false,
+                        shadowMode: false
+                        }
+                    },
+                    {
+                        loader: 'css-loader',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2
+                        }
+                    },
+                    {
+                        loader: 'postcss-loader',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    },
+                    {
+                        loader: 'sass-loader',
+                        options: {
+                        sourceMap: false,
+                        sassOptions: {
+                            indentedSyntax: true
+                        }
+                        }
+                    }
+                    ]
+                },
+                {
+                    test: /\.module\.\w+$/,
+                    use: [
+                    {
+                        loader: 'vue-style-loader',
+                        options: {
+                        sourceMap: false,
+                        shadowMode: false
+                        }
+                    },
+                    {
+                        loader: 'css-loader',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2,
+                        modules: {
+                            localIdentName: '[name]_[local]_[hash:base64:5]'
+                        }
+                        }
+                    },
+                    {
+                        loader: 'postcss-loader',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    },
+                    {
+                        loader: 'sass-loader',
+                        options: {
+                        sourceMap: false,
+                        sassOptions: {
+                            indentedSyntax: true
+                        }
+                        }
+                    }
+                    ]
+                },
+                /* config.module.rule('sass').oneOf('normal') */
+                {
+                    use: [
+                    /* config.module.rule('sass').oneOf('normal').use('vue-style-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\vue-style-loader\\index.js',
+                        options: {
+                        sourceMap: false,
+                        shadowMode: false
+                        }
+                    },
+                    /* config.module.rule('sass').oneOf('normal').use('css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\css-loader\\dist\\cjs.js',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2
+                        }
+                    },
+                    /* config.module.rule('sass').oneOf('normal').use('postcss-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\postcss-loader',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    },
+                    /* config.module.rule('sass').oneOf('normal').use('sass-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\sass-loader\\dist\\cjs.js',
+                        options: {
+                        sourceMap: false,
+                        sassOptions: {
+                            indentedSyntax: true
+                        }
+                        }
+                    }
+                    ]
+                }
+                ]
+            },
+            /**
+            * 处理.less
+            * 1. `?module`的使用 less-loader postcss-loader css-loader vue-style-loader
+            * 2. `??vue`的使用 less-loader postcss-loader css-loader vue-style-loader
+            * 3. `?.module`开头的 less-loader postcss-loader css-loader vue-style-loader
+            * 4. 其他 less-loader postcss-loader css-loader vue-style-loader
+            */
+            {
+                test: /\.less$/,
+                oneOf: [
+                {
+                    resourceQuery: /module/,
+                    use: [
+                    {
+                        loader: 'vue-style-loader',
+                        options: {
+                        sourceMap: false,
+                        shadowMode: false
+                        }
+                    },
+                    {
+                        loader: 'css-loader',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2,
+                        modules: {
+                            localIdentName: '[name]_[local]_[hash:base64:5]'
+                        }
+                        }
+                    },
+                    {
+                        loader: 'postcss-loader',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    },
+                    {
+                        loader: 'less-loader',
+                        options: {
+                        sourceMap: false
+                        }
+                    }
+                    ]
+                },
+                {
+                    resourceQuery: /\?vue/,
+                    use: [
+                    {
+                        loader: 'vue-style-loader',
+                        options: {
+                        sourceMap: false,
+                        shadowMode: false
+                        }
+                    },
+                    {
+                        loader: 'css-loader',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2
+                        }
+                    },
+                    {
+                        loader: 'postcss-loader',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    },
+                    {
+                        loader: 'less-loader',
+                        options: {
+                        sourceMap: false
+                        }
+                    }
+                    ]
+                },
+                {
+                    test: /\.module\.\w+$/,
+                    use: [
+                    {
+                        loader: 'vue-style-loader',
+                        options: {
+                        sourceMap: false,
+                        shadowMode: false
+                        }
+                    },
+                    {
+                        loader: 'css-loader',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2,
+                        modules: {
+                            localIdentName: '[name]_[local]_[hash:base64:5]'
+                        }
+                        }
+                    },
+                    {
+                        loader: 'postcss-loader',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    },
+                    /* config.module.rule('less').oneOf('normal-modules').use('less-loader') */
+                    {
+                        loader: 'less-loader',
+                        options: {
+                        sourceMap: false
+                        }
+                    }
+                    ]
+                },
+                {
+                    use: [
+                    {
+                        loader: 'vue-style-loader',
+                        options: {
+                        sourceMap: false,
+                        shadowMode: false
+                        }
+                    },
+                    {
+                        loader: 'css-loader',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2
+                        }
+                    },
+                    {
+                        loader: 'postcss-loader',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    },
+                    {
+                        loader: 'less-loader',
+                        options: {
+                        sourceMap: false
+                        }
+                    }
+                    ]
+                }
+                ]
+            },
+            /**
+            * 处理.styl 或 .stylus
+            * 1. `?module`的使用 stylus-loader postcss-loader css-loader vue-style-loader
+            * 2. `??vue`的使用 stylus-loader postcss-loader css-loader vue-style-loader
+            * 3. `?.module`开头的 stylus-loader postcss-loader css-loader vue-style-loader
+            * 4. 其他 stylus-loader postcss-loader css-loader vue-style-loader
+            */
+            {
+                test: /\.styl(us)?$/,
+                oneOf: [
+                {
+                    resourceQuery: /module/,
+                    use: [
+                    {
+                        loader: 'vue-style-loader',
+                        options: {
+                        sourceMap: false,
+                        shadowMode: false
+                        }
+                    },
+                    {
+                        loader: 'css-loader',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2,
+                        modules: {
+                            localIdentName: '[name]_[local]_[hash:base64:5]'
+                        }
+                        }
+                    },
+                    {
+                        loader: 'postcss-loader',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    },
+                    {
+                        loader: 'stylus-loader',
+                        options: {
+                        sourceMap: false,
+                        preferPathResolver: 'webpack'
+                        }
+                    }
+                    ]
+                },
+                {
+                    resourceQuery: /\?vue/,
+                    use: [
+                    {
+                        loader: 'vue-style-loader',
+                        options: {
+                        sourceMap: false,
+                        shadowMode: false
+                        }
+                    },
+                    {
+                        loader: 'css-loader',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2
+                        }
+                    },
+                    {
+                        loader: 'postcss-loader',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    },
+                    {
+                        loader: 'stylus-loader',
+                        options: {
+                        sourceMap: false,
+                        preferPathResolver: 'webpack' // 用于在stylus中使用到webpack定义resolver路径，编译报错的问题
+                        }
+                    }
+                    ]
+                },
+                {
+                    test: /\.module\.\w+$/,
+                    use: [
+                    {
+                        loader: 'vue-style-loader',
+                        options: {
+                        sourceMap: false,
+                        shadowMode: false
+                        }
+                    },
+                    {
+                        loader: 'css-loader',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2,
+                        modules: {
+                            localIdentName: '[name]_[local]_[hash:base64:5]'
+                        }
+                        }
+                    },
+                    {
+                        loader: 'postcss-loader',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    },
+                    {
+                        loader: 'stylus-loader',
+                        options: {
+                        sourceMap: false,
+                        preferPathResolver: 'webpack'
+                        }
+                    }
+                    ]
+                },
+                {
+                    use: [
+                    {
+                        loader: 'vue-style-loader',
+                        options: {
+                        sourceMap: false,
+                        shadowMode: false
+                        }
+                    },
+                    {
+                        loader: 'css-loader',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2
+                        }
+                    },
+                    {
+                        loader: 'postcss-loader',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    },
+                    {
+                        loader: 'stylus-loader',
+                        options: {
+                        sourceMap: false,
+                        preferPathResolver: 'webpack'
+                        }
+                    }
+                    ]
+                }
+                ]
+            },
+            /**
+            * 处理 .mjsx .mjs .mjs .js的使用 babel-loader cache-loader
+            */
+            {
+                test: /\.m?jsx?$/,
+                exclude: [
+                function () { /* omitted long function */ }
+                ],
+                use: [
+                {
+                    loader: 'cache-loader',
+                    options: {
+                    cacheDirectory: 'E:\\workspace\\vue-webpack\\node_modules\\.cache\\babel-loader',
+                    cacheIdentifier: 'cf7d2252'
+                    }
+                },
+                {
+                    loader: 'babel-loader'
+                }
+                ]
+            },
+            /**
+            * 处理 .vue .js .jsx .ts .tsx的使用eslint-loader
+            * 加了enforce强制最前置
+            */
+            {
+                enforce: 'pre',
+                test: /\.(vue|(j|t)sx?)$/,
+                exclude: [ // 排除哪些文件不检查
+                /node_modules/,
+                'E:\\workspace\\vue-webpack\\node_modules\\@vue\\cli-service\\lib'
+                ],
+                use: [
+                {
+                    loader: 'eslint-loader',
+                    options: {
+                    extensions: ['.js', '.jsx', '.vue', '.ts', '.tsx'],
+                    cache: true,
+                    cacheIdentifier: '0caaf9dc',
+                    emitWarning: false,
+                    emitError: false,
+                    eslintPath: require.resolve('eslint'), // 指定eslint的路径
+                    formatter: undefined
+                    }
+                }
+                ]
+            },
+            /**
+            * 处理.ts的使用ts-loader babel-loader cache-loader
+            */
+            {
+                test: /\.ts$/,
+                use: [
+                {
+                    loader: 'cache-loader',
+                    options: {
+                    cacheDirectory: 'E:\\workspace\\vue-webpack\\node_modules\\.cache\\ts-loader',
+                    cacheIdentifier: '5d7d1b2e'
+                    }
+                },
+                {
+                    loader: 'babel-loader'
+                },
+                {
+                    loader: 'ts-loader',
+                    options: {
+                    transpileOnly: true, // 关闭ts语义检查，提高编译速度，也是为了fork-ts-checker-webpack-plugin启动多线程
+                    appendTsSuffixTo: ['\\.vue$'], // 识别.vue文件
+                    happyPackMode: false // 是否开启happyPack
+                    }
+                }
+                ]
+            },
+            /**
+            * 处理.tsx 的使用 ts-loader babel-loader cache-loader
+            */
+            {
+                test: /\.tsx$/,
+                use: [
+                {
+                    loader: 'cache-loader',
+                    options: {
+                    cacheDirectory: 'E:\\workspace\\vue-webpack\\node_modules\\.cache\\ts-loader',
+                    cacheIdentifier: '5d7d1b2e'
+                    }
+                },
+                {
+                    loader: 'babel-loader'
+                },
+                {
+                    loader: 'ts-loader',
+                    options: {
+                    transpileOnly: true,
+                    happyPackMode: false,
+                    appendTsxSuffixTo: ['\\.vue$']
+                    }
+                }
+                ]
+            }
+            ]
+        },
+        optimization: {
+            splitChunks: {
+            cacheGroups: {
+                vendors: {
+                name: 'chunk-vendors',
+                test: /[\\\/]node_modules[\\\/]/, // node_modules文件里面的
+                priority: -10, // 权重
+                chunks: 'initial' // initial 动态加载的会抽离 + 公共import的会抽离
+                },
+                common: {
+                name: 'chunk-common',
+                minChunks: 2, // 自己写的js代码，如果有2个地方import则抽成公共
+                priority: -20,
+                chunks: 'initial',
+                reuseExistingChunk: true // 如果当前的 chunk 包含的模块已经被抽取出去了，那么将不会重新生成新的
+                }
+            }
+            },
+            minimizer: [
+            /* config.optimization.minimizer('terser') */
+            new TerserPlugin( // 压缩js的插件
+                {
+                terserOptions: {
+                    compress: {
+                    arrows: false,
+                    collapse_vars: false,
+                    comparisons: false,
+                    computed_props: false,
+                    hoist_funs: false,
+                    hoist_props: false,
+                    hoist_vars: false,
+                    inline: false,
+                    loops: false,
+                    negate_iife: false,
+                    properties: false,
+                    reduce_funcs: false,
+                    reduce_vars: false,
+                    switches: false,
+                    toplevel: false,
+                    typeofs: false,
+                    booleans: true,
+                    if_return: true,
+                    sequences: true,
+                    unused: true,
+                    conditionals: true,
+                    dead_code: true,
+                    evaluate: true
+                    },
+                    mangle: {
+                    safari10: true
+                    }
+                },
+                sourceMap: true,
+                cache: true, // 开启缓存
+                parallel: true, // 开启多线程
+                extractComments: false
+                }
+            )
+            ]
+        },
+        plugins: [
+            // vue-loader的启动
+            new VueLoaderPlugin(),
+
+            // 提供全局变量
+            new DefinePlugin({
+            'process.env': {
+                NODE_ENV: '"development"',
+                BASE_URL: '"/"'
+            }
+            }),
+
+            // 用于强制所有模块的完整路径必需与磁盘上实际路径的确切大小写相匹配
+            new CaseSensitivePathsPlugin(),
+
+            // 识别某些类型的 webpack 错误并整理，以提供开发人员更好的体验。
+            new FriendlyErrorsWebpackPlugin(
+            {
+                additionalTransformers: [
+                function () { /* omitted long function */ }
+                ],
+                additionalFormatters: [
+                function () { /* omitted long function */ }
+                ]
+            }
+            ),
+
+            // html-webpack-plugin
+            new HtmlWebpackPlugin(
+            {
+                title: 'vue-webpack',
+                templateParameters: function () { /* omitted long function */ },
+                template: 'E:\\workspace\\vue-webpack\\public\\index.html'
+            }
+            ),
+
+            /**
+            * 用于在使用 html-webpack-plugin 生成的 html 中添加 <link rel =‘preload’> 或 <link rel =‘prefetch’>，有助于异步加载
+            * 一定写在HtmlWebPackPlugin插件之后，否则会报`HtmlWebpackPlugin.getHooks is not a function`错误
+            */
+            new PreloadPlugin(
+            {
+                rel: 'preload', // preload/prefetch
+                include: 'initial', // 哪些要预加载: allChunks/initial/asyncChunks/数组
+                fileBlacklist: [ // 黑名单
+                /\.map$/,
+                /hot-update\.js$/
+                ]
+            }
+            ),
+            new PreloadPlugin(
+            {
+                rel: 'prefetch',
+                include: 'asyncChunks'
+            }
+            ),
+            // copy-webpack-plugin把public里面的都复制过去
+            new CopyPlugin(
+            [
+                {
+                from: 'E:\\workspace\\vue-webpack\\public',
+                to: 'E:\\workspace\\vue-webpack\\dist',
+                toType: 'dir',
+                ignore: [
+                    '.DS_Store',
+                    {
+                    glob: 'index.html',
+                    matchBase: false
+                    }
+                ]
+                }
+            ]
+            ),
+            /**
+            * 启动多线程来运行Typescript类型检查
+            * fork一个进程进行检查，并设置async为false，将错误信息反馈给webpack
+            */
+            new ForkTsCheckerWebpackPlugin(
+            {
+                vue: { // 是否处理vue单文件
+                enabled: true,
+                compiler: 'vue-template-compiler'
+                },
+                tslint: false,
+                formatter: 'codeframe', // 传递给格式化程序的选项, 当前只有codeframe
+                checkSyntacticErrors: false
+            }
+            )
+        ],
+        // 入口
+        entry: {
+            app: ['./src/main.ts']
+        }
+    }
+
+
+* 生产环境：
+    module.exports = {
+        mode: 'production',
+        context: 'E:\\workspace\\vue-webpack',
+        // 用什么sourceMap
+        devtool: 'source-map',
+        node: {
+            setImmediate: false,
+            process: 'mock',
+            dgram: 'empty',
+            fs: 'empty',
+            net: 'empty',
+            tls: 'empty',
+            child_process: 'empty'
+        },
+        output: {
+            path: 'E:\\workspace\\vue-webpack\\dist',
+            filename: 'js/[name].[contenthash:8].js',
+            publicPath: '/',
+            chunkFilename: 'js/[name].[contenthash:8].js'
+        },
+        resolve: {
+            alias: {
+            '@': 'E:\\workspace\\vue-webpack\\src',
+            vue$: 'vue/dist/vue.runtime.esm.js'
+            },
+            extensions: ['.tsx', '.ts', '.mjs', '.js', '.jsx', '.vue', '.json', '.wasm'],
+            modules: [
+            'node_modules',
+            'E:\\workspace\\vue-webpack\\node_modules',
+            'E:\\workspace\\vue-webpack\\node_modules\\@vue\\cli-service\\node_modules'
+            ],
+            plugins: [
+            /* config.resolve.plugin('pnp') */
+            {}
+            ]
+        },
+        resolveLoader: {
+            modules: [
+            'E:\\workspace\\vue-webpack\\node_modules\\@vue\\cli-plugin-typescript\\node_modules',
+            'E:\\workspace\\vue-webpack\\node_modules\\@vue\\cli-plugin-babel\\node_modules',
+            'node_modules',
+            'E:\\workspace\\vue-webpack\\node_modules',
+            'E:\\workspace\\vue-webpack\\node_modules\\@vue\\cli-service\\node_modules'
+            ],
+            plugins: [
+            /* config.resolve.plugin('pnp-loaders') */
+            {}
+            ]
+        },
+        module: {
+            noParse: /^(vue|vue-router|vuex|vuex-router-sync)$/,
+            rules: [
+            /* config.module.rule('vue') */
+            {
+                test: /\.vue$/,
+                use: [
+                /* config.module.rule('vue').use('cache-loader') */
+                {
+                    loader: 'E:\\workspace\\vue-webpack\\node_modules\\cache-loader\\dist\\cjs.js',
+                    options: {
+                    cacheDirectory: 'E:\\workspace\\vue-webpack\\node_modules\\.cache\\vue-loader',
+                    cacheIdentifier: '1bf24094'
+                    }
+                },
+                /* config.module.rule('vue').use('vue-loader') */
+                {
+                    loader: 'E:\\workspace\\vue-webpack\\node_modules\\vue-loader\\lib\\index.js',
+                    options: {
+                    compilerOptions: {
+                        whitespace: 'condense'
+                    },
+                    cacheDirectory: 'E:\\workspace\\vue-webpack\\node_modules\\.cache\\vue-loader',
+                    cacheIdentifier: '1bf24094'
+                    }
+                }
+                ]
+            },
+            /* config.module.rule('images') */
+            {
+                test: /\.(png|jpe?g|gif|webp)(\?.*)?$/,
+                use: [
+                /* config.module.rule('images').use('url-loader') */
+                {
+                    loader: 'E:\\workspace\\vue-webpack\\node_modules\\url-loader\\dist\\cjs.js',
+                    options: {
+                    limit: 4096,
+                    fallback: {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\file-loader\\dist\\cjs.js',
+                        options: {
+                        name: 'img/[name].[hash:8].[ext]'
+                        }
+                    }
+                    }
+                }
+                ]
+            },
+            /* config.module.rule('svg') */
+            {
+                test: /\.(svg)(\?.*)?$/,
+                use: [
+                /* config.module.rule('svg').use('file-loader') */
+                {
+                    loader: 'E:\\workspace\\vue-webpack\\node_modules\\file-loader\\dist\\cjs.js',
+                    options: {
+                    name: 'img/[name].[hash:8].[ext]'
+                    }
+                }
+                ]
+            },
+            /* config.module.rule('media') */
+            {
+                test: /\.(mp4|webm|ogg|mp3|wav|flac|aac)(\?.*)?$/,
+                use: [
+                /* config.module.rule('media').use('url-loader') */
+                {
+                    loader: 'E:\\workspace\\vue-webpack\\node_modules\\url-loader\\dist\\cjs.js',
+                    options: {
+                    limit: 4096,
+                    fallback: {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\file-loader\\dist\\cjs.js',
+                        options: {
+                        name: 'media/[name].[hash:8].[ext]'
+                        }
+                    }
+                    }
+                }
+                ]
+            },
+            /* config.module.rule('fonts') */
+            {
+                test: /\.(woff2?|eot|ttf|otf)(\?.*)?$/i,
+                use: [
+                /* config.module.rule('fonts').use('url-loader') */
+                {
+                    loader: 'E:\\workspace\\vue-webpack\\node_modules\\url-loader\\dist\\cjs.js',
+                    options: {
+                    limit: 4096,
+                    fallback: {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\file-loader\\dist\\cjs.js',
+                        options: {
+                        name: 'fonts/[name].[hash:8].[ext]'
+                        }
+                    }
+                    }
+                }
+                ]
+            },
+            /* config.module.rule('pug') */
+            {
+                test: /\.pug$/,
+                oneOf: [
+                /* config.module.rule('pug').oneOf('pug-vue') */
+                {
+                    resourceQuery: /vue/,
+                    use: [
+                    /* config.module.rule('pug').oneOf('pug-vue').use('pug-plain-loader') */
+                    {
+                        loader: 'pug-plain-loader'
+                    }
+                    ]
+                },
+                /* config.module.rule('pug').oneOf('pug-template') */
+                {
+                    use: [
+                    /* config.module.rule('pug').oneOf('pug-template').use('raw') */
+                    {
+                        loader: 'raw-loader'
+                    },
+                    /* config.module.rule('pug').oneOf('pug-template').use('pug-plain-loader') */
+                    {
+                        loader: 'pug-plain-loader'
+                    }
+                    ]
+                }
+                ]
+            },
+            /* config.module.rule('css') */
+            {
+                test: /\.css$/,
+                oneOf: [
+                /* config.module.rule('css').oneOf('vue-modules') */
+                {
+                    resourceQuery: /module/,
+                    use: [
+                    /* config.module.rule('css').oneOf('vue-modules').use('extract-css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\mini-css-extract-plugin\\dist\\loader.js',
+                        options: {
+                        hmr: false,
+                        publicPath: '../'
+                        }
+                    },
+                    /* config.module.rule('css').oneOf('vue-modules').use('css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\css-loader\\dist\\cjs.js',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2,
+                        modules: {
+                            localIdentName: '[name]_[local]_[hash:base64:5]'
+                        }
+                        }
+                    },
+                    /* config.module.rule('css').oneOf('vue-modules').use('postcss-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\postcss-loader\\src\\index.js',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    }
+                    ]
+                },
+                /* config.module.rule('css').oneOf('vue') */
+                {
+                    resourceQuery: /\?vue/,
+                    use: [
+                    /* config.module.rule('css').oneOf('vue').use('extract-css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\mini-css-extract-plugin\\dist\\loader.js',
+                        options: {
+                        hmr: false,
+                        publicPath: '../'
+                        }
+                    },
+                    /* config.module.rule('css').oneOf('vue').use('css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\css-loader\\dist\\cjs.js',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2
+                        }
+                    },
+                    /* config.module.rule('css').oneOf('vue').use('postcss-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\postcss-loader\\src\\index.js',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    }
+                    ]
+                },
+                /* config.module.rule('css').oneOf('normal-modules') */
+                {
+                    test: /\.module\.\w+$/,
+                    use: [
+                    /* config.module.rule('css').oneOf('normal-modules').use('extract-css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\mini-css-extract-plugin\\dist\\loader.js',
+                        options: {
+                        hmr: false,
+                        publicPath: '../'
+                        }
+                    },
+                    /* config.module.rule('css').oneOf('normal-modules').use('css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\css-loader\\dist\\cjs.js',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2,
+                        modules: {
+                            localIdentName: '[name]_[local]_[hash:base64:5]'
+                        }
+                        }
+                    },
+                    /* config.module.rule('css').oneOf('normal-modules').use('postcss-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\postcss-loader\\src\\index.js',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    }
+                    ]
+                },
+                /* config.module.rule('css').oneOf('normal') */
+                {
+                    use: [
+                    /* config.module.rule('css').oneOf('normal').use('extract-css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\mini-css-extract-plugin\\dist\\loader.js',
+                        options: {
+                        hmr: false,
+                        publicPath: '../'
+                        }
+                    },
+                    /* config.module.rule('css').oneOf('normal').use('css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\css-loader\\dist\\cjs.js',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2
+                        }
+                    },
+                    /* config.module.rule('css').oneOf('normal').use('postcss-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\postcss-loader\\src\\index.js',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    }
+                    ]
+                }
+                ]
+            },
+            /* config.module.rule('postcss') */
+            {
+                test: /\.p(ost)?css$/,
+                oneOf: [
+                /* config.module.rule('postcss').oneOf('vue-modules') */
+                {
+                    resourceQuery: /module/,
+                    use: [
+                    /* config.module.rule('postcss').oneOf('vue-modules').use('extract-css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\mini-css-extract-plugin\\dist\\loader.js',
+                        options: {
+                        hmr: false,
+                        publicPath: '../'
+                        }
+                    },
+                    /* config.module.rule('postcss').oneOf('vue-modules').use('css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\css-loader\\dist\\cjs.js',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2,
+                        modules: {
+                            localIdentName: '[name]_[local]_[hash:base64:5]'
+                        }
+                        }
+                    },
+                    /* config.module.rule('postcss').oneOf('vue-modules').use('postcss-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\postcss-loader\\src\\index.js',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    }
+                    ]
+                },
+                /* config.module.rule('postcss').oneOf('vue') */
+                {
+                    resourceQuery: /\?vue/,
+                    use: [
+                    /* config.module.rule('postcss').oneOf('vue').use('extract-css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\mini-css-extract-plugin\\dist\\loader.js',
+                        options: {
+                        hmr: false,
+                        publicPath: '../'
+                        }
+                    },
+                    /* config.module.rule('postcss').oneOf('vue').use('css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\css-loader\\dist\\cjs.js',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2
+                        }
+                    },
+                    /* config.module.rule('postcss').oneOf('vue').use('postcss-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\postcss-loader\\src\\index.js',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    }
+                    ]
+                },
+                /* config.module.rule('postcss').oneOf('normal-modules') */
+                {
+                    test: /\.module\.\w+$/,
+                    use: [
+                    /* config.module.rule('postcss').oneOf('normal-modules').use('extract-css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\mini-css-extract-plugin\\dist\\loader.js',
+                        options: {
+                        hmr: false,
+                        publicPath: '../'
+                        }
+                    },
+                    /* config.module.rule('postcss').oneOf('normal-modules').use('css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\css-loader\\dist\\cjs.js',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2,
+                        modules: {
+                            localIdentName: '[name]_[local]_[hash:base64:5]'
+                        }
+                        }
+                    },
+                    /* config.module.rule('postcss').oneOf('normal-modules').use('postcss-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\postcss-loader\\src\\index.js',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    }
+                    ]
+                },
+                /* config.module.rule('postcss').oneOf('normal') */
+                {
+                    use: [
+                    /* config.module.rule('postcss').oneOf('normal').use('extract-css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\mini-css-extract-plugin\\dist\\loader.js',
+                        options: {
+                        hmr: false,
+                        publicPath: '../'
+                        }
+                    },
+                    /* config.module.rule('postcss').oneOf('normal').use('css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\css-loader\\dist\\cjs.js',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2
+                        }
+                    },
+                    /* config.module.rule('postcss').oneOf('normal').use('postcss-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\postcss-loader\\src\\index.js',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    }
+                    ]
+                }
+                ]
+            },
+            /* config.module.rule('scss') */
+            {
+                test: /\.scss$/,
+                oneOf: [
+                /* config.module.rule('scss').oneOf('vue-modules') */
+                {
+                    resourceQuery: /module/,
+                    use: [
+                    /* config.module.rule('scss').oneOf('vue-modules').use('extract-css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\mini-css-extract-plugin\\dist\\loader.js',
+                        options: {
+                        hmr: false,
+                        publicPath: '../'
+                        }
+                    },
+                    /* config.module.rule('scss').oneOf('vue-modules').use('css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\css-loader\\dist\\cjs.js',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2,
+                        modules: {
+                            localIdentName: '[name]_[local]_[hash:base64:5]'
+                        }
+                        }
+                    },
+                    /* config.module.rule('scss').oneOf('vue-modules').use('postcss-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\postcss-loader\\src\\index.js',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    },
+                    /* config.module.rule('scss').oneOf('vue-modules').use('sass-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\sass-loader\\dist\\cjs.js',
+                        options: {
+                        sourceMap: false
+                        }
+                    }
+                    ]
+                },
+                /* config.module.rule('scss').oneOf('vue') */
+                {
+                    resourceQuery: /\?vue/,
+                    use: [
+                    /* config.module.rule('scss').oneOf('vue').use('extract-css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\mini-css-extract-plugin\\dist\\loader.js',
+                        options: {
+                        hmr: false,
+                        publicPath: '../'
+                        }
+                    },
+                    /* config.module.rule('scss').oneOf('vue').use('css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\css-loader\\dist\\cjs.js',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2
+                        }
+                    },
+                    /* config.module.rule('scss').oneOf('vue').use('postcss-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\postcss-loader\\src\\index.js',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    },
+                    /* config.module.rule('scss').oneOf('vue').use('sass-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\sass-loader\\dist\\cjs.js',
+                        options: {
+                        sourceMap: false
+                        }
+                    }
+                    ]
+                },
+                /* config.module.rule('scss').oneOf('normal-modules') */
+                {
+                    test: /\.module\.\w+$/,
+                    use: [
+                    /* config.module.rule('scss').oneOf('normal-modules').use('extract-css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\mini-css-extract-plugin\\dist\\loader.js',
+                        options: {
+                        hmr: false,
+                        publicPath: '../'
+                        }
+                    },
+                    /* config.module.rule('scss').oneOf('normal-modules').use('css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\css-loader\\dist\\cjs.js',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2,
+                        modules: {
+                            localIdentName: '[name]_[local]_[hash:base64:5]'
+                        }
+                        }
+                    },
+                    /* config.module.rule('scss').oneOf('normal-modules').use('postcss-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\postcss-loader\\src\\index.js',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    },
+                    /* config.module.rule('scss').oneOf('normal-modules').use('sass-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\sass-loader\\dist\\cjs.js',
+                        options: {
+                        sourceMap: false
+                        }
+                    }
+                    ]
+                },
+                /* config.module.rule('scss').oneOf('normal') */
+                {
+                    use: [
+                    /* config.module.rule('scss').oneOf('normal').use('extract-css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\mini-css-extract-plugin\\dist\\loader.js',
+                        options: {
+                        hmr: false,
+                        publicPath: '../'
+                        }
+                    },
+                    /* config.module.rule('scss').oneOf('normal').use('css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\css-loader\\dist\\cjs.js',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2
+                        }
+                    },
+                    /* config.module.rule('scss').oneOf('normal').use('postcss-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\postcss-loader\\src\\index.js',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    },
+                    /* config.module.rule('scss').oneOf('normal').use('sass-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\sass-loader\\dist\\cjs.js',
+                        options: {
+                        sourceMap: false
+                        }
+                    }
+                    ]
+                }
+                ]
+            },
+            /* config.module.rule('sass') */
+            {
+                test: /\.sass$/,
+                oneOf: [
+                /* config.module.rule('sass').oneOf('vue-modules') */
+                {
+                    resourceQuery: /module/,
+                    use: [
+                    /* config.module.rule('sass').oneOf('vue-modules').use('extract-css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\mini-css-extract-plugin\\dist\\loader.js',
+                        options: {
+                        hmr: false,
+                        publicPath: '../'
+                        }
+                    },
+                    /* config.module.rule('sass').oneOf('vue-modules').use('css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\css-loader\\dist\\cjs.js',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2,
+                        modules: {
+                            localIdentName: '[name]_[local]_[hash:base64:5]'
+                        }
+                        }
+                    },
+                    /* config.module.rule('sass').oneOf('vue-modules').use('postcss-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\postcss-loader\\src\\index.js',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    },
+                    /* config.module.rule('sass').oneOf('vue-modules').use('sass-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\sass-loader\\dist\\cjs.js',
+                        options: {
+                        sourceMap: false,
+                        sassOptions: {
+                            indentedSyntax: true
+                        }
+                        }
+                    }
+                    ]
+                },
+                /* config.module.rule('sass').oneOf('vue') */
+                {
+                    resourceQuery: /\?vue/,
+                    use: [
+                    /* config.module.rule('sass').oneOf('vue').use('extract-css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\mini-css-extract-plugin\\dist\\loader.js',
+                        options: {
+                        hmr: false,
+                        publicPath: '../'
+                        }
+                    },
+                    /* config.module.rule('sass').oneOf('vue').use('css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\css-loader\\dist\\cjs.js',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2
+                        }
+                    },
+                    /* config.module.rule('sass').oneOf('vue').use('postcss-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\postcss-loader\\src\\index.js',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    },
+                    /* config.module.rule('sass').oneOf('vue').use('sass-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\sass-loader\\dist\\cjs.js',
+                        options: {
+                        sourceMap: false,
+                        sassOptions: {
+                            indentedSyntax: true
+                        }
+                        }
+                    }
+                    ]
+                },
+                /* config.module.rule('sass').oneOf('normal-modules') */
+                {
+                    test: /\.module\.\w+$/,
+                    use: [
+                    /* config.module.rule('sass').oneOf('normal-modules').use('extract-css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\mini-css-extract-plugin\\dist\\loader.js',
+                        options: {
+                        hmr: false,
+                        publicPath: '../'
+                        }
+                    },
+                    /* config.module.rule('sass').oneOf('normal-modules').use('css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\css-loader\\dist\\cjs.js',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2,
+                        modules: {
+                            localIdentName: '[name]_[local]_[hash:base64:5]'
+                        }
+                        }
+                    },
+                    /* config.module.rule('sass').oneOf('normal-modules').use('postcss-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\postcss-loader\\src\\index.js',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    },
+                    /* config.module.rule('sass').oneOf('normal-modules').use('sass-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\sass-loader\\dist\\cjs.js',
+                        options: {
+                        sourceMap: false,
+                        sassOptions: {
+                            indentedSyntax: true
+                        }
+                        }
+                    }
+                    ]
+                },
+                /* config.module.rule('sass').oneOf('normal') */
+                {
+                    use: [
+                    /* config.module.rule('sass').oneOf('normal').use('extract-css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\mini-css-extract-plugin\\dist\\loader.js',
+                        options: {
+                        hmr: false,
+                        publicPath: '../'
+                        }
+                    },
+                    /* config.module.rule('sass').oneOf('normal').use('css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\css-loader\\dist\\cjs.js',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2
+                        }
+                    },
+                    /* config.module.rule('sass').oneOf('normal').use('postcss-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\postcss-loader\\src\\index.js',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    },
+                    /* config.module.rule('sass').oneOf('normal').use('sass-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\sass-loader\\dist\\cjs.js',
+                        options: {
+                        sourceMap: false,
+                        sassOptions: {
+                            indentedSyntax: true
+                        }
+                        }
+                    }
+                    ]
+                }
+                ]
+            },
+            /* config.module.rule('less') */
+            {
+                test: /\.less$/,
+                oneOf: [
+                /* config.module.rule('less').oneOf('vue-modules') */
+                {
+                    resourceQuery: /module/,
+                    use: [
+                    /* config.module.rule('less').oneOf('vue-modules').use('extract-css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\mini-css-extract-plugin\\dist\\loader.js',
+                        options: {
+                        hmr: false,
+                        publicPath: '../'
+                        }
+                    },
+                    /* config.module.rule('less').oneOf('vue-modules').use('css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\css-loader\\dist\\cjs.js',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2,
+                        modules: {
+                            localIdentName: '[name]_[local]_[hash:base64:5]'
+                        }
+                        }
+                    },
+                    /* config.module.rule('less').oneOf('vue-modules').use('postcss-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\postcss-loader\\src\\index.js',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    },
+                    /* config.module.rule('less').oneOf('vue-modules').use('less-loader') */
+                    {
+                        loader: 'less-loader',
+                        options: {
+                        sourceMap: false
+                        }
+                    }
+                    ]
+                },
+                /* config.module.rule('less').oneOf('vue') */
+                {
+                    resourceQuery: /\?vue/,
+                    use: [
+                    /* config.module.rule('less').oneOf('vue').use('extract-css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\mini-css-extract-plugin\\dist\\loader.js',
+                        options: {
+                        hmr: false,
+                        publicPath: '../'
+                        }
+                    },
+                    /* config.module.rule('less').oneOf('vue').use('css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\css-loader\\dist\\cjs.js',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2
+                        }
+                    },
+                    /* config.module.rule('less').oneOf('vue').use('postcss-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\postcss-loader\\src\\index.js',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    },
+                    /* config.module.rule('less').oneOf('vue').use('less-loader') */
+                    {
+                        loader: 'less-loader',
+                        options: {
+                        sourceMap: false
+                        }
+                    }
+                    ]
+                },
+                /* config.module.rule('less').oneOf('normal-modules') */
+                {
+                    test: /\.module\.\w+$/,
+                    use: [
+                    /* config.module.rule('less').oneOf('normal-modules').use('extract-css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\mini-css-extract-plugin\\dist\\loader.js',
+                        options: {
+                        hmr: false,
+                        publicPath: '../'
+                        }
+                    },
+                    /* config.module.rule('less').oneOf('normal-modules').use('css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\css-loader\\dist\\cjs.js',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2,
+                        modules: {
+                            localIdentName: '[name]_[local]_[hash:base64:5]'
+                        }
+                        }
+                    },
+                    /* config.module.rule('less').oneOf('normal-modules').use('postcss-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\postcss-loader\\src\\index.js',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    },
+                    /* config.module.rule('less').oneOf('normal-modules').use('less-loader') */
+                    {
+                        loader: 'less-loader',
+                        options: {
+                        sourceMap: false
+                        }
+                    }
+                    ]
+                },
+                /* config.module.rule('less').oneOf('normal') */
+                {
+                    use: [
+                    /* config.module.rule('less').oneOf('normal').use('extract-css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\mini-css-extract-plugin\\dist\\loader.js',
+                        options: {
+                        hmr: false,
+                        publicPath: '../'
+                        }
+                    },
+                    /* config.module.rule('less').oneOf('normal').use('css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\css-loader\\dist\\cjs.js',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2
+                        }
+                    },
+                    /* config.module.rule('less').oneOf('normal').use('postcss-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\postcss-loader\\src\\index.js',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    },
+                    /* config.module.rule('less').oneOf('normal').use('less-loader') */
+                    {
+                        loader: 'less-loader',
+                        options: {
+                        sourceMap: false
+                        }
+                    }
+                    ]
+                }
+                ]
+            },
+            /* config.module.rule('stylus') */
+            {
+                test: /\.styl(us)?$/,
+                oneOf: [
+                /* config.module.rule('stylus').oneOf('vue-modules') */
+                {
+                    resourceQuery: /module/,
+                    use: [
+                    /* config.module.rule('stylus').oneOf('vue-modules').use('extract-css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\mini-css-extract-plugin\\dist\\loader.js',
+                        options: {
+                        hmr: false,
+                        publicPath: '../'
+                        }
+                    },
+                    /* config.module.rule('stylus').oneOf('vue-modules').use('css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\css-loader\\dist\\cjs.js',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2,
+                        modules: {
+                            localIdentName: '[name]_[local]_[hash:base64:5]'
+                        }
+                        }
+                    },
+                    /* config.module.rule('stylus').oneOf('vue-modules').use('postcss-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\postcss-loader\\src\\index.js',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    },
+                    /* config.module.rule('stylus').oneOf('vue-modules').use('stylus-loader') */
+                    {
+                        loader: 'stylus-loader',
+                        options: {
+                        sourceMap: false,
+                        preferPathResolver: 'webpack'
+                        }
+                    }
+                    ]
+                },
+                /* config.module.rule('stylus').oneOf('vue') */
+                {
+                    resourceQuery: /\?vue/,
+                    use: [
+                    /* config.module.rule('stylus').oneOf('vue').use('extract-css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\mini-css-extract-plugin\\dist\\loader.js',
+                        options: {
+                        hmr: false,
+                        publicPath: '../'
+                        }
+                    },
+                    /* config.module.rule('stylus').oneOf('vue').use('css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\css-loader\\dist\\cjs.js',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2
+                        }
+                    },
+                    /* config.module.rule('stylus').oneOf('vue').use('postcss-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\postcss-loader\\src\\index.js',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    },
+                    /* config.module.rule('stylus').oneOf('vue').use('stylus-loader') */
+                    {
+                        loader: 'stylus-loader',
+                        options: {
+                        sourceMap: false,
+                        preferPathResolver: 'webpack'
+                        }
+                    }
+                    ]
+                },
+                /* config.module.rule('stylus').oneOf('normal-modules') */
+                {
+                    test: /\.module\.\w+$/,
+                    use: [
+                    /* config.module.rule('stylus').oneOf('normal-modules').use('extract-css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\mini-css-extract-plugin\\dist\\loader.js',
+                        options: {
+                        hmr: false,
+                        publicPath: '../'
+                        }
+                    },
+                    /* config.module.rule('stylus').oneOf('normal-modules').use('css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\css-loader\\dist\\cjs.js',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2,
+                        modules: {
+                            localIdentName: '[name]_[local]_[hash:base64:5]'
+                        }
+                        }
+                    },
+                    /* config.module.rule('stylus').oneOf('normal-modules').use('postcss-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\postcss-loader\\src\\index.js',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    },
+                    /* config.module.rule('stylus').oneOf('normal-modules').use('stylus-loader') */
+                    {
+                        loader: 'stylus-loader',
+                        options: {
+                        sourceMap: false,
+                        preferPathResolver: 'webpack'
+                        }
+                    }
+                    ]
+                },
+                /* config.module.rule('stylus').oneOf('normal') */
+                {
+                    use: [
+                    /* config.module.rule('stylus').oneOf('normal').use('extract-css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\mini-css-extract-plugin\\dist\\loader.js',
+                        options: {
+                        hmr: false,
+                        publicPath: '../'
+                        }
+                    },
+                    /* config.module.rule('stylus').oneOf('normal').use('css-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\css-loader\\dist\\cjs.js',
+                        options: {
+                        sourceMap: false,
+                        importLoaders: 2
+                        }
+                    },
+                    /* config.module.rule('stylus').oneOf('normal').use('postcss-loader') */
+                    {
+                        loader: 'E:\\workspace\\vue-webpack\\node_modules\\postcss-loader\\src\\index.js',
+                        options: {
+                        sourceMap: false,
+                        plugins: [
+                            function () { /* omitted long function */ }
+                        ]
+                        }
+                    },
+                    /* config.module.rule('stylus').oneOf('normal').use('stylus-loader') */
+                    {
+                        loader: 'stylus-loader',
+                        options: {
+                        sourceMap: false,
+                        preferPathResolver: 'webpack'
+                        }
+                    }
+                    ]
+                }
+                ]
+            },
+            /* config.module.rule('js') */
+            {
+                test: /\.m?jsx?$/,
+                exclude: [
+                function () { /* omitted long function */ }
+                ],
+                use: [
+                /* config.module.rule('js').use('cache-loader') */
+                {
+                    loader: 'E:\\workspace\\vue-webpack\\node_modules\\cache-loader\\dist\\cjs.js',
+                    options: {
+                    cacheDirectory: 'E:\\workspace\\vue-webpack\\node_modules\\.cache\\babel-loader',
+                    cacheIdentifier: '538adfce'
+                    }
+                },
+                /* config.module.rule('js').use('thread-loader') */
+                {
+                    loader: 'E:\\workspace\\vue-webpack\\node_modules\\thread-loader\\dist\\cjs.js'
+                },
+                /* config.module.rule('js').use('babel-loader') */
+                {
+                    loader: 'E:\\workspace\\vue-webpack\\node_modules\\babel-loader\\lib\\index.js'
+                }
+                ]
+            },
+            /* config.module.rule('eslint') */
+            {
+                enforce: 'pre',
+                test: /\.(vue|(j|t)sx?)$/,
+                exclude: [
+                /node_modules/,
+                'E:\\workspace\\vue-webpack\\node_modules\\@vue\\cli-service\\lib'
+                ],
+                use: [
+                /* config.module.rule('eslint').use('eslint-loader') */
+                {
+                    loader: 'E:\\workspace\\vue-webpack\\node_modules\\eslint-loader\\index.js',
+                    options: {
+                    extensions: [
+                        '.js',
+                        '.jsx',
+                        '.vue',
+                        '.ts',
+                        '.tsx'
+                    ],
+                    cache: true,
+                    cacheIdentifier: 'bd69fdba',
+                    emitWarning: false,
+                    emitError: false,
+                    eslintPath: 'E:\\workspace\\vue-webpack\\node_modules\\eslint',
+                    formatter: undefined
+                    }
+                }
+                ]
+            },
+            /* config.module.rule('ts') */
+            {
+                test: /\.ts$/,
+                use: [
+                /* config.module.rule('ts').use('cache-loader') */
+                {
+                    loader: 'E:\\workspace\\vue-webpack\\node_modules\\cache-loader\\dist\\cjs.js',
+                    options: {
+                    cacheDirectory: 'E:\\workspace\\vue-webpack\\node_modules\\.cache\\ts-loader',
+                    cacheIdentifier: '108cc2fc'
+                    }
+                },
+                /* config.module.rule('ts').use('thread-loader') */
+                {
+                    loader: 'E:\\workspace\\vue-webpack\\node_modules\\thread-loader\\dist\\cjs.js'
+                },
+                /* config.module.rule('ts').use('babel-loader') */
+                {
+                    loader: 'E:\\workspace\\vue-webpack\\node_modules\\babel-loader\\lib\\index.js'
+                },
+                /* config.module.rule('ts').use('ts-loader') */
+                {
+                    loader: 'E:\\workspace\\vue-webpack\\node_modules\\ts-loader\\index.js',
+                    options: {
+                    transpileOnly: true,
+                    appendTsSuffixTo: [
+                        '\\.vue$'
+                    ],
+                    happyPackMode: true
+                    }
+                }
+                ]
+            },
+            /* config.module.rule('tsx') */
+            {
+                test: /\.tsx$/,
+                use: [
+                /* config.module.rule('tsx').use('cache-loader') */
+                {
+                    loader: 'E:\\workspace\\vue-webpack\\node_modules\\cache-loader\\dist\\cjs.js',
+                    options: {
+                    cacheDirectory: 'E:\\workspace\\vue-webpack\\node_modules\\.cache\\ts-loader',
+                    cacheIdentifier: '108cc2fc'
+                    }
+                },
+                /* config.module.rule('tsx').use('thread-loader') */
+                {
+                    loader: 'E:\\workspace\\vue-webpack\\node_modules\\thread-loader\\dist\\cjs.js'
+                },
+                /* config.module.rule('tsx').use('babel-loader') */
+                {
+                    loader: 'E:\\workspace\\vue-webpack\\node_modules\\babel-loader\\lib\\index.js'
+                },
+                /* config.module.rule('tsx').use('ts-loader') */
+                {
+                    loader: 'E:\\workspace\\vue-webpack\\node_modules\\ts-loader\\index.js',
+                    options: {
+                    transpileOnly: true,
+                    happyPackMode: true,
+                    appendTsxSuffixTo: [
+                        '\\.vue$'
+                    ]
+                    }
+                }
+                ]
+            }
+            ]
+        },
+        optimization: {
+            splitChunks: {
+            cacheGroups: {
+                vendors: {
+                name: 'chunk-vendors',
+                test: /[\\\/]node_modules[\\\/]/,
+                priority: -10,
+                chunks: 'initial'
+                },
+                common: {
+                name: 'chunk-common',
+                minChunks: 2,
+                priority: -20,
+                chunks: 'initial',
+                reuseExistingChunk: true
+                }
+            }
+            },
+            minimizer: [
+            /* config.optimization.minimizer('terser') */
+            new TerserPlugin(
+                {
+                terserOptions: {
+                    compress: {
+                    arrows: false,
+                    collapse_vars: false,
+                    comparisons: false,
+                    computed_props: false,
+                    hoist_funs: false,
+                    hoist_props: false,
+                    hoist_vars: false,
+                    inline: false,
+                    loops: false,
+                    negate_iife: false,
+                    properties: false,
+                    reduce_funcs: false,
+                    reduce_vars: false,
+                    switches: false,
+                    toplevel: false,
+                    typeofs: false,
+                    booleans: true,
+                    if_return: true,
+                    sequences: true,
+                    unused: true,
+                    conditionals: true,
+                    dead_code: true,
+                    evaluate: true
+                    },
+                    mangle: {
+                    safari10: true
+                    }
+                },
+                sourceMap: true,
+                cache: true,
+                parallel: true,
+                extractComments: false
+                }
+            )
+            ]
+        },
+        plugins: [
+            /* config.plugin('vue-loader') */
+            new VueLoaderPlugin(),
+            /* config.plugin('define') */
+            new DefinePlugin(
+            {
+                'process.env': {
+                NODE_ENV: '"production"',
+                BASE_URL: '"/"'
+                }
+            }
+            ),
+            /* config.plugin('case-sensitive-paths') */
+            new CaseSensitivePathsPlugin(),
+            /* config.plugin('friendly-errors') */
+            new FriendlyErrorsWebpackPlugin(
+            {
+                additionalTransformers: [
+                function () { /* omitted long function */ }
+                ],
+                additionalFormatters: [
+                function () { /* omitted long function */ }
+                ]
+            }
+            ),
+            /* config.plugin('extract-css') */
+            new MiniCssExtractPlugin(
+            {
+                filename: 'css/[name].[contenthash:8].css',
+                chunkFilename: 'css/[name].[contenthash:8].css'
+            }
+            ),
+            /* config.plugin('optimize-css') */
+            new OptimizeCssnanoPlugin(
+            {
+                sourceMap: false,
+                cssnanoOptions: {
+                preset: [
+                    'default',
+                    {
+                    mergeLonghand: false,
+                    cssDeclarationSorter: false
+                    }
+                ]
+                }
+            }
+            ),
+            /* config.plugin('hash-module-ids') */
+            new HashedModuleIdsPlugin(
+            {
+                hashDigest: 'hex'
+            }
+            ),
+            /* config.plugin('named-chunks') */
+            new NamedChunksPlugin(
+            function () { /* omitted long function */ }
+            ),
+            /* config.plugin('html') */
+            new HtmlWebpackPlugin(
+            {
+                title: 'vue-webpack',
+                templateParameters: function () { /* omitted long function */ },
+                minify: {
+                removeComments: true,
+                collapseWhitespace: true,
+                removeAttributeQuotes: true,
+                collapseBooleanAttributes: true,
+                removeScriptTypeAttributes: true
+                },
+                template: 'E:\\workspace\\vue-webpack\\public\\index.html'
+            }
+            ),
+            /* config.plugin('preload') */
+            new PreloadPlugin(
+            {
+                rel: 'preload',
+                include: 'initial',
+                fileBlacklist: [
+                /\.map$/,
+                /hot-update\.js$/
+                ]
+            }
+            ),
+            /* config.plugin('prefetch') */
+            new PreloadPlugin(
+            {
+                rel: 'prefetch',
+                include: 'asyncChunks'
+            }
+            ),
+            /* config.plugin('copy') */
+            new CopyPlugin(
+            [
+                {
+                from: 'E:\\workspace\\vue-webpack\\public',
+                to: 'E:\\workspace\\vue-webpack\\dist',
+                toType: 'dir',
+                ignore: [
+                    '.DS_Store',
+                    {
+                    glob: 'index.html',
+                    matchBase: false
+                    }
+                ]
+                }
+            ]
+            ),
+            /* config.plugin('fork-ts-checker') */
+            new ForkTsCheckerWebpackPlugin(
+            {
+                vue: {
+                enabled: true,
+                compiler: 'vue-template-compiler'
+                },
+                tslint: false,
+                formatter: 'codeframe',
+                checkSyntacticErrors: true
+            }
+            )
+        ],
+        entry: {
+            app: [
+            './src/main.ts'
+            ]
+        }
+    }
+
+
+* 生产环境与开发环境的差异点：
+    /**
+    * 1. 多devtool这个配置
+    * 2. output.filename 和 output.chunkFilename配置多个 [contenthash:8]
+    * 3. css等样式类的处理不同
+    *    ----| dev的是 sass-loader postcss-loader css-loader vue-style-loader 的处理
+    *    ----| build的是 sass-loader postcss-loader css-loader mini-css-extract-plugin
+    *    --------| mini-css-extract-plugin配置如下:
+    *    --------| options: {
+    *    --------|     hmr: false,
+    *    --------|     publicPath: '../'
+    *    --------| }
+    *    因为使用了mini-css-extract-plugin，webpack.plugins的需要加上下面代码
+    *        new MiniCssExtractPlugin({
+    *            filename: 'css/[name].[contenthash:8].css',
+    *            chunkFilename: 'css/[name].[contenthash:8].css'
+    *        })
+    *    prod模式下，css的压缩，修改webpack.plugins配置
+    *        new OptimizeCssnanoPlugin({
+    *            sourceMap: false,
+    *            cssnanoOptions: {
+    *                preset: ['default', {
+    *                    mergeLonghand: false,
+    *                    cssDeclarationSorter: false
+    *                }]
+    *             }
+    *        })
+    *
+    * 4. 处理 .mjsx .mjs .mjs .js不同
+    *    ----| dev的是 babel-loader cache-loader
+    *    ----| build的是 babel-loader thread-loader cache-loader
+    *
+    * 5. 处理.ts .tsx不同
+    *    ----| dev的是 ts-loader babel-loader cache-loader
+    *    ----| build的是 ts-loader babel-loader thread-loader cache-loader
+    *    --------| 其中ts-loader配置不同，dev的`ts-loader.happyPackMode=false`， build的为`ts-loader.happyPackMode=true`
+    *
+    * 6. 新增hash-module-ids，修改webpack.plugins
+    *    new HashedModuleIdsPlugin({ hashDigest: 'hex' });
+    *
+    * 7. 新增named-chunks，修改webpack.plugins
+    *    new NamedChunksPlugin()
+    *
+    * 8. prod模式下的HtmlWebpackPlugin，压缩html，新增配置如下:
+    *    minify: {
+    *        removeComments: true,
+    *        collapseWhitespace: true,
+    *        removeAttributeQuotes: true,
+    *        collapseBooleanAttributes: true,
+    *        removeScriptTypeAttributes: true
+    *    }
+    *
+    * 9. webpack.plugins下的fork-ts-checker，配置不同
+    *    ----| dev的 `checkSyntacticErrors=false`，
+    *    ----| prod的`checkSyntacticErrors=true`
+    */
